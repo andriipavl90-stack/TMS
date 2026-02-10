@@ -5,7 +5,7 @@ import { seedSuperAdmin } from './config/seed.js';
 
 dotenv.config();
 
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT;
 
 // Connect to database and seed
 const startServer = async () => {
