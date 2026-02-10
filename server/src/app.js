@@ -38,25 +38,23 @@ app.use(helmet());
 //   },
 //   credentials: true
 // }));
-const allowedOrigins = process.env.CLIENT_URL.split(",");
+
+const allowedOrigins = [
+  "https://management-system-1-kns6.onrender.com",
+  "http://localhost:5173", // if you use local dev
+];
 
 app.use(cors({
-  origin: (origin, callback) => {
+  origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
     }
   },
-  credentials: true
+  credentials: true,
 }));
 
-// app.use(cors());
-// app.use(
-//   '/uploads',
-//   express.static(path.join(process.cwd(), 'uploads'))
-// );
-// Request logging
 app.use(morgan('dev'));
 
 // Body parsing middleware
@@ -145,113 +143,3 @@ app.use((err, req, res, next) => {
 
 export default app;
 
-// import express from 'express';
-// import cors from 'cors';
-// import helmet from 'helmet';
-// import morgan from 'morgan';
-// import dotenv from 'dotenv';
-// import routes from './routes/index.js';
-
-// dotenv.config();
-
-// const app = express();
-
-// /* ========================
-//    Security Middleware
-// ======================== */
-// app.use(helmet());
-
-// /* ========================
-//    CORS Configuration
-// ======================== */
-// const allowedOrigins = process.env.CLIENT_URL
-//   ? process.env.CLIENT_URL.split(',').map(url => url.trim())
-//   : ['http://localhost:5173'];
-
-// app.use(
-//   cors({
-//     origin: (origin, callback) => {
-//       if (!origin) return callback(null, true);
-
-//       if (allowedOrigins.some(allowed => origin.startsWith(allowed))) {
-//         callback(null, true);
-//       } else {
-//         callback(new Error('Not allowed by CORS'));
-//       }
-//     },
-//     credentials: true
-//   })
-// );
-
-// /* ========================
-//    Logging & Parsers
-// ======================== */
-// app.use(morgan('dev'));
-// app.use(express.json());
-// app.use(express.urlencoded({ extended: true }));
-
-// /* ========================
-//    Health Check
-// ======================== */
-// app.get('/health', (req, res) => {
-//   res.json({
-//     ok: true,
-//     service: 'team-management-api',
-//     time: new Date().toISOString()
-//   });
-// });
-
-// /* ========================
-//    API Routes
-// ======================== */
-// app.use('/api', routes);
-
-// /* ========================
-//    404 Handler
-// ======================== */
-// app.use((req, res) => {
-//   res.status(404).json({
-//     ok: false,
-//     message: 'Route not found'
-//   });
-// });
-
-// /* ========================
-//    Global Error Handler
-// ======================== */
-// app.use((err, req, res, next) => {
-//   console.error(err);
-
-//   if (err.name === 'ZodError') {
-//     return res.status(400).json({
-//       ok: false,
-//       code: 'VALIDATION_ERROR',
-//       message: err.errors[0]?.message
-//     });
-//   }
-
-//   if (err.name === 'MulterError') {
-//     return res.status(400).json({
-//       ok: false,
-//       code: 'FILE_UPLOAD_ERROR',
-//       message: err.message
-//     });
-//   }
-
-//   if (err.code === 11000) {
-//     const field = Object.keys(err.keyPattern)[0];
-//     return res.status(400).json({
-//       ok: false,
-//       code: 'DUPLICATE_ENTRY',
-//       message: `${field} already exists`
-//     });
-//   }
-
-//   res.status(err.status || 500).json({
-//     ok: false,
-//     code: 'INTERNAL_ERROR',
-//     message: err.message || 'Internal server error'
-//   });
-// });
-
-// export default app;
