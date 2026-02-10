@@ -38,12 +38,19 @@ app.use(helmet());
 //   },
 //   credentials: true
 // }));
-const cors = require("cors");
+const allowedOrigins = process.env.CLIENT_URL.split(",");
 
 app.use(cors({
-  origin: process.env.CLIENT_URL,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true
 }));
+
 // app.use(cors());
 // app.use(
 //   '/uploads',
