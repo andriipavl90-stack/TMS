@@ -16,8 +16,9 @@ import { fetchUsers } from '../services/users'
 /* ===============================
    STATE
 ================================ */
-
-const selectedMonth = ref('2026-01') // YYYY-MM
+const now = new Date()
+const currentMonth = now.toISOString().slice(0, 7)
+const selectedMonth = ref(currentMonth) // YYYY-MM
 const selectedMemberId = ref('all')  // 'all' or userId
 const selectedWeek = ref('all')
 const loading = ref(false)

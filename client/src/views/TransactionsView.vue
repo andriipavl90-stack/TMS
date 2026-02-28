@@ -207,9 +207,16 @@ const {
 const allUsers = ref([]);
 const selectedUserId = ref('');
 const selectedUser = ref(null);
+const now = new Date()
+
+// First day of current month
+const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+
+// Last day of current month
+const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
 const filters = ref({
-  from: new Date("01/01/2026").toISOString().slice(0, 10),
-  to: new Date("01/31/2026").toISOString().slice(0, 10),
+  from: firstDay.toISOString().slice(0, 10),
+  to: lastDay.toISOString().slice(0, 10),
   type: '',
   status: '',
   description: '',
