@@ -70,15 +70,17 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { useStore } from 'vuex';
-import { useAuthStore } from '../composables/useAuth';
+import { storeToRefs } from 'pinia';
+import { useAuthStore } from '../stores/auth';
+import { useJobProfilesStore } from '../stores/jobProfiles';
 import { normalizeRole, ROLES } from '../constants/roles.js';
 import { fetchGroups } from '../services/admin.js';
 import ProfileTable from '../components/Profiles/ProfileTable.vue';
 import ProfileModal from '../components/Profiles/ProfileModal/ProfileModal.vue';
 import ProfileDrawer from '../components/Profiles/ProfileDrawer/ProfileDrawer.vue';
 
-const store = useStore();
+const jobProfilesStore = useJobProfilesStore();
+const { profiles, loading, error } = storeToRefs(jobProfilesStore);
 const authStore = useAuthStore();
 
 const showModal = ref(false);
@@ -91,10 +93,6 @@ const groups = ref([]);
 
 let searchTimeout = null;
 
-const profiles = computed(() => store.getters['jobProfiles/profiles']);
-const loading = computed(() => store.getters['jobProfiles/loading']);
-const error = computed(() => store.getters['jobProfiles/error']);
-
 const canCreate = computed(() => {
   if (!authStore.user) return false;
   const userRole = normalizeRole(authStore.user.role);
@@ -104,12 +102,12 @@ const canCreate = computed(() => {
 });
 
 const loadProfiles = async () => {
-  store.dispatch('jobProfiles/setFilters', {
+  jobProfilesStore.setFilters({
     search: searchQuery.value,
     status: statusFilter.value,
     group: groupFilter.value
   });
-  await store.dispatch('jobProfiles/fetchProfiles');
+  await jobProfilesStore.fetchProfiles();
 };
 
 const loadGroups = async () => {
@@ -138,8 +136,7 @@ const openCreateModal = () => {
 };
 
 const handleView = async (profile) => {
-  // Fetch full profile details
-  await store.dispatch('jobProfiles/fetchProfile', profile._id || profile.id);
+  await jobProfilesStore.fetchProfile(profile._id || profile.id);
 };
 
 const handleEdit = (profile) => {
@@ -152,7 +149,7 @@ const handleDelete = async (profile) => {
     return;
   }
 
-  await store.dispatch('jobProfiles/deleteProfile', profile._id || profile.id);
+  await jobProfilesStore.deleteProfile(profile._id || profile.id);
 };
 
 const closeModal = () => {
@@ -169,22 +166,20 @@ const handleSubmit = async ({ formData, pictureFile, attachmentFiles }) => {
       const profileId = editingProfile.value._id || editingProfile.value.id;
       
       // Update profile data
-      await store.dispatch('jobProfiles/updateProfile', {
+      await jobProfilesStore.updateProfile({
         profileId,
         profileData: formData
       });
 
-      // Upload picture if selected
       if (pictureFile) {
-        await store.dispatch('jobProfiles/uploadProfilePicture', {
+        await jobProfilesStore.uploadProfilePicture({
           profileId,
           pictureFile
         });
       }
 
-      // Upload attachments if selected
       if (attachmentFiles && attachmentFiles.length > 0) {
-        await store.dispatch('jobProfiles/uploadAttachments', {
+        await jobProfilesStore.uploadAttachments({
           profileId,
           files: attachmentFiles
         });
@@ -195,22 +190,20 @@ const handleSubmit = async ({ formData, pictureFile, attachmentFiles }) => {
       closeModal();
     } else {
       // Create new profile
-      const response = await store.dispatch('jobProfiles/createProfile', formData);
+      const response = await jobProfilesStore.createProfile(formData);
       
       if (response.ok && response.data && response.data.profile) {
         const newProfileId = response.data.profile._id || response.data.profile.id;
         
-        // Upload picture if selected
         if (pictureFile) {
-          await store.dispatch('jobProfiles/uploadProfilePicture', {
+          await jobProfilesStore.uploadProfilePicture({
             profileId: newProfileId,
             pictureFile
           });
         }
 
-        // Upload attachments if selected
         if (attachmentFiles && attachmentFiles.length > 0) {
-          await store.dispatch('jobProfiles/uploadAttachments', {
+          await jobProfilesStore.uploadAttachments({
             profileId: newProfileId,
             files: attachmentFiles
           });

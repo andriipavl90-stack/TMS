@@ -186,21 +186,20 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { useStore } from 'vuex';
-import { useAuthStore } from '../../../composables/useAuth';
+import { storeToRefs } from 'pinia';
+import { useAuthStore } from '../../../stores/auth';
+import { usePersonalProfilesStore } from '../../../stores/personalProfiles';
 import { canEditPersonalProfile } from '../../../utils/profilePermissions';
 import ProfileHeader from '../../Profiles/ProfileDrawer/ProfileHeader.vue';
 import PersonalProfilePicture from './PersonalProfilePicture.vue';
 import PersonalProfileAttachments from './PersonalProfileAttachments.vue';
 
-const store = useStore();
+const personalStore = usePersonalProfilesStore();
+const { selectedProfile, hasSelectedProfile } = storeToRefs(personalStore);
 const authStore = useAuthStore();
 
 const isEditing = ref(false);
 const saving = ref(false);
-
-const selectedProfile = computed(() => store.getters['personalProfiles/selectedProfile']);
-const hasSelectedProfile = computed(() => store.getters['personalProfiles/hasSelectedProfile']);
 
 const canEdit = computed(() => {
   return canEditPersonalProfile(authStore.user, selectedProfile.value);
@@ -264,7 +263,7 @@ const handleUpdate = async () => {
   
   saving.value = true;
   try {
-    await store.dispatch('personalProfiles/updateProfile', {
+    await personalStore.updateProfile({
       profileId: profile._id || profile.id,
       profileData: editForm.value
     });
@@ -278,7 +277,7 @@ const handleUpdate = async () => {
 
 const handleClose = () => {
   isEditing.value = false;
-  store.dispatch('personalProfiles/clearSelectedProfile');
+  personalStore.clearSelectedProfile();
 };
 
 const handleOverlayClick = () => {

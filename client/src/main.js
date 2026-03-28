@@ -2,7 +2,6 @@ import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import App from './App.vue';
 import router from './router';
-import store from './store';
 import Toast from 'vue-toastification';
 import CKEditor from '@ckeditor/ckeditor5-vue';
 import 'vue-toastification/dist/index.css';
@@ -10,13 +9,9 @@ import 'vue-toastification/dist/index.css';
 const app = createApp(App);
 app.use(CKEditor);
 const pinia = createPinia();
-
-// Use both Pinia (for backward compatibility) and Vuex (for new modules)
 app.use(pinia);
-app.use(store);
 app.use(router);
 
-// Configure toast notifications
 app.use(Toast, {
   transition: 'Vue-Toastification__bounce',
   maxToasts: 5,
@@ -35,8 +30,4 @@ app.use(Toast, {
   rtl: false
 });
 
-// Restore auth on app init
-store.dispatch('auth/restoreAuth');
-
 app.mount('#app');
-

@@ -48,7 +48,7 @@
 import { ref, computed, watch } from 'vue';
 import { useFinance } from '../../composables/useFinance';
 import { fetchTransactions } from '../../services/finance';
-import { useAuthStore } from '../../composables/useAuth';
+import { useAuthStore } from '../../stores/auth';
 
 import FinanceKpiCards from '../finance/FinanceKpiCards.vue';
 import TransactionsTable from '../finance/TransactionsTable.vue';

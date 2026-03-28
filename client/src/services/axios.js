@@ -1,6 +1,4 @@
 import axios from 'axios';
-import { useAuthStore } from '../composables/useAuth';
-import router from '../router';
 import { useToast } from 'vue-toastification';
 
 const toast = useToast();
@@ -58,10 +56,10 @@ apiClient.interceptors.response.use(
   (error) => {
     // Handle 401 Unauthorized
     if (error.response?.status === 401) {
-      const authStore = useAuthStore();
-      authStore.logout();
       toast.error('Session expired. Please login again.');
-      router.push('/login');
+      import('../stores/auth.js').then(({ useAuthStore }) => {
+        useAuthStore().logout();
+      });
       return Promise.reject(error);
     }
 

@@ -136,7 +136,7 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue';
-import { useAuthStore } from '../../../composables/useAuth';
+import { useAuthStore } from '../../../stores/auth';
 import { normalizeRole, ROLES } from '../../../constants/roles.js';
 import { ENTITY_GROUP_OPTIONS, DEFAULT_ENTITY_GROUP } from '../../../constants/groups.js';
 import FileUploadSection from '../../Profiles/ProfileModal/FileUploadSection.vue';

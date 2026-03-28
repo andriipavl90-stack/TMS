@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { useAuthStore } from '../composables/useAuth';
+import { useAuthStore } from '../stores/auth';
 import { canAccessAdmin, canViewAuditLogs, hasAnyRole } from '../utils/permissions';
 import { ROLES, LEGACY_ROLES } from '../constants/roles.js';
 const FINANCE_ADMIN_ROLES = [

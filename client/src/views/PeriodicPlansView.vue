@@ -216,7 +216,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useFinance } from '../composables/useFinance';
-import { useAuthStore } from '../composables/useAuth';
+import { useAuthStore } from '../stores/auth';
 import { fetchUsers } from '../services/users';
 import { excludeSuperAdmin } from '../utils/userFilters';
 import {

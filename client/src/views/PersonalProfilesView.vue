@@ -66,14 +66,16 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useStore } from 'vuex';
-import { useAuthStore } from '../composables/useAuth';
+import { storeToRefs } from 'pinia';
+import { useAuthStore } from '../stores/auth';
+import { usePersonalProfilesStore } from '../stores/personalProfiles';
 import { canCreatePersonalProfile } from '../utils/profilePermissions';
 import PersonalProfileTable from '../components/personalProfiles/PersonalProfileTable.vue';
 import PersonalProfileModal from '../components/personalProfiles/PersonalProfileModal/PersonalProfileModal.vue';
 import PersonalProfileDrawer from '../components/personalProfiles/PersonalProfileDrawer/PersonalProfileDrawer.vue';
 
-const store = useStore();
+const personalStore = usePersonalProfilesStore();
+const { profiles, loading, error } = storeToRefs(personalStore);
 const authStore = useAuthStore();
 
 const showModal = ref(false);
@@ -84,23 +86,16 @@ const statusFilter = ref('');
 
 let searchTimeout = null;
 
-const profiles = computed(() => store.getters['personalProfiles/profiles']);
-const loading = computed(() => store.getters['personalProfiles/loading']);
-const error = computed(() => store.getters['personalProfiles/error']);
-
 const canCreate = computed(() => {
   return canCreatePersonalProfile(authStore.user);
 });
 
 const loadProfiles = async () => {
-  // Update filters in store
-  store.dispatch('personalProfiles/setFilters', {
+  personalStore.setFilters({
     search: searchQuery.value,
     status: statusFilter.value
   });
-  
-  // Fetch profiles
-  await store.dispatch('personalProfiles/fetchProfiles');
+  await personalStore.fetchProfiles();
 };
 
 const handleSearch = () => {
@@ -120,8 +115,7 @@ const openCreateModal = () => {
 };
 
 const handleView = async (profile) => {
-  // Fetch full profile details
-  await store.dispatch('personalProfiles/fetchProfile', profile._id || profile.id);
+  await personalStore.fetchProfile(profile._id || profile.id);
 };
 
 const handleEdit = (profile) => {
@@ -134,7 +128,7 @@ const handleDelete = async (profile) => {
     return;
   }
 
-  await store.dispatch('personalProfiles/deleteProfile', profile._id || profile.id);
+  await personalStore.deleteProfile(profile._id || profile.id);
 };
 
 const closeModal = () => {
@@ -151,22 +145,20 @@ const handleSubmit = async ({ formData, pictureFile, attachmentFiles }) => {
       const profileId = editingProfile.value._id || editingProfile.value.id;
       
       // Update profile data
-      await store.dispatch('personalProfiles/updateProfile', {
+      await personalStore.updateProfile({
         profileId,
         profileData: formData
       });
 
-      // Upload picture if selected
       if (pictureFile) {
-        await store.dispatch('personalProfiles/uploadProfilePicture', {
+        await personalStore.uploadProfilePicture({
           profileId,
           pictureFile
         });
       }
 
-      // Upload attachments if selected
       if (attachmentFiles && attachmentFiles.length > 0) {
-        await store.dispatch('personalProfiles/uploadAttachments', {
+        await personalStore.uploadAttachments({
           profileId,
           files: attachmentFiles
         });
@@ -177,22 +169,20 @@ const handleSubmit = async ({ formData, pictureFile, attachmentFiles }) => {
       closeModal();
     } else {
       // Create new profile
-      const response = await store.dispatch('personalProfiles/createProfile', formData);
+      const response = await personalStore.createProfile(formData);
       
       if (response.ok && response.data && response.data.profile) {
         const newProfileId = response.data.profile._id || response.data.profile.id;
         
-        // Upload picture if selected
         if (pictureFile) {
-          await store.dispatch('personalProfiles/uploadProfilePicture', {
+          await personalStore.uploadProfilePicture({
             profileId: newProfileId,
             pictureFile
           });
         }
 
-        // Upload attachments if selected
         if (attachmentFiles && attachmentFiles.length > 0) {
-          await store.dispatch('personalProfiles/uploadAttachments', {
+          await personalStore.uploadAttachments({
             profileId: newProfileId,
             files: attachmentFiles
           });

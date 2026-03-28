@@ -40,7 +40,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { useStore } from 'vuex';
+import { useFreelancerProfilesStore } from '../../../stores/freelancerProfiles';
 
 const props = defineProps({
   profile: {
@@ -53,7 +53,7 @@ const props = defineProps({
   }
 });
 
-const store = useStore();
+const freelancerStore = useFreelancerProfilesStore();
 const uploadAttachmentRef = ref(null);
 const uploading = ref(false);
 
@@ -71,7 +71,7 @@ const handleAttachmentUpload = async (event) => {
 
   uploading.value = true;
   try {
-    await store.dispatch('freelancerProfiles/uploadAttachments', {
+    await freelancerStore.uploadAttachments({
       profileId: props.profile._id || props.profile.id,
       files
     });
@@ -91,7 +91,7 @@ const handleDeleteAttachment = async (fileId) => {
   }
 
   try {
-    await store.dispatch('freelancerProfiles/deleteAttachment', {
+    await freelancerStore.deleteAttachment({
       profileId: props.profile._id || props.profile.id,
       fileId
     });

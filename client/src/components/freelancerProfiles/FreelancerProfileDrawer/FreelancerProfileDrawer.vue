@@ -179,10 +179,10 @@
         </div>
 
         <!-- Profile Picture -->
-        <ProfilePicture :profile="selectedProfile" :can-edit="canEdit" />
+        <FreelancerProfilePicture :profile="selectedProfile" />
 
         <!-- Attachments -->
-        <ProfileAttachments :profile="selectedProfile" :can-edit="canEdit" />
+        <FreelancerProfileAttachments :profile="selectedProfile" :can-edit="canEdit" />
       </div>
     </div>
   </div>
@@ -190,24 +190,23 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { useStore } from 'vuex';
-import { useAuthStore } from '../../../composables/useAuth';
+import { storeToRefs } from 'pinia';
+import { useAuthStore } from '../../../stores/auth';
+import { useFreelancerProfilesStore } from '../../../stores/freelancerProfiles';
 import { canEditFreelancerProfile } from '../../../utils/profilePermissions';
 import { ENTITY_GROUP_OPTIONS, formatGroupLabel, DEFAULT_ENTITY_GROUP } from '../../../constants/groups.js';
 import ProfileHeader from '../../Profiles/ProfileDrawer/ProfileHeader.vue';
-import ProfilePicture from '../../Profiles/ProfileDrawer/ProfilePicture.vue';
-import ProfileAttachments from '../../Profiles/ProfileDrawer/ProfileAttachments.vue';
+import FreelancerProfilePicture from './FreelancerProfilePicture.vue';
+import FreelancerProfileAttachments from './FreelancerProfileAttachments.vue';
 
 const entityGroupOptions = ENTITY_GROUP_OPTIONS;
 
-const store = useStore();
+const freelancerStore = useFreelancerProfilesStore();
+const { selectedProfile, hasSelectedProfile } = storeToRefs(freelancerStore);
 const authStore = useAuthStore();
 
 const isEditing = ref(false);
 const saving = ref(false);
-
-const selectedProfile = computed(() => store.getters['freelancerProfiles/selectedProfile']);
-const hasSelectedProfile = computed(() => store.getters['freelancerProfiles/hasSelectedProfile']);
 
 const canEdit = computed(() => {
   return canEditFreelancerProfile(authStore.user, selectedProfile.value);
@@ -275,7 +274,7 @@ const handleUpdate = async () => {
 
   saving.value = true;
   try {
-    await store.dispatch('freelancerProfiles/updateProfile', {
+    await freelancerStore.updateProfile({
       profileId: profile._id || profile.id,
       profileData: editForm.value
     });
@@ -289,7 +288,7 @@ const handleUpdate = async () => {
 
 const handleClose = () => {
   isEditing.value = false;
-  store.dispatch('freelancerProfiles/clearSelectedProfile');
+  freelancerStore.clearSelectedProfile();
 };
 
 const handleOverlayClick = () => {

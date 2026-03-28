@@ -1,5 +1,17 @@
 import apiClient from './axios';
 
+/** @param {{ start: string, end: string, memberId?: string, groupId?: string }} params */
+export const getFinanceOverview = ({ start, end, memberId, groupId }) => {
+  return apiClient.get('/finance/finance-overview', {
+    params: {
+      start,
+      end,
+      ...(memberId && { memberId }),
+      ...(groupId && { groupId })
+    }
+  });
+};
+
 /**
  * Finance API service
  * 

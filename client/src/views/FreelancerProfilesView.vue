@@ -66,14 +66,16 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useStore } from 'vuex';
-import { useAuthStore } from '../composables/useAuth';
+import { storeToRefs } from 'pinia';
+import { useAuthStore } from '../stores/auth';
+import { useFreelancerProfilesStore } from '../stores/freelancerProfiles';
 import { canCreateFreelancerProfile } from '../utils/profilePermissions';
 import FreelancerProfileTable from '../components/freelancerProfiles/FreelancerProfileTable.vue';
 import FreelancerProfileModal from '../components/freelancerProfiles/FreelancerProfileModal/FreelancerProfileModal.vue';
 import FreelancerProfileDrawer from '../components/freelancerProfiles/FreelancerProfileDrawer/FreelancerProfileDrawer.vue';
 
-const store = useStore();
+const freelancerStore = useFreelancerProfilesStore();
+const { profiles, loading, error, selectedProfile } = storeToRefs(freelancerStore);
 const authStore = useAuthStore();
 
 const showModal = ref(false);
@@ -84,23 +86,16 @@ const statusFilter = ref('');
 
 let searchTimeout = null;
 
-const profiles = computed(() => store.getters['freelancerProfiles/profiles']);
-const loading = computed(() => store.getters['freelancerProfiles/loading']);
-const error = computed(() => store.getters['freelancerProfiles/error']);
-
 const canCreate = computed(() => {
   return canCreateFreelancerProfile(authStore.user);
 });
 
 const loadProfiles = async () => {
-  // Update filters in store
-  store.dispatch('freelancerProfiles/setFilters', {
+  freelancerStore.setFilters({
     search: searchQuery.value,
     status: statusFilter.value
   });
-  
-  // Fetch profiles
-  await store.dispatch('freelancerProfiles/fetchProfiles');
+  await freelancerStore.fetchProfiles();
 };
 
 const handleSearch = () => {
@@ -120,8 +115,7 @@ const openCreateModal = () => {
 };
 
 const handleView = async (profile) => {
-  // Fetch full profile details
-  await store.dispatch('freelancerProfiles/fetchProfile', profile._id || profile.id);
+  await freelancerStore.fetchProfile(profile._id || profile.id);
 };
 
 const handleEdit = (profile) => {
@@ -134,7 +128,7 @@ const handleDelete = async (profile) => {
     return;
   }
 
-  await store.dispatch('freelancerProfiles/deleteProfile', profile._id || profile.id);
+  await freelancerStore.deleteProfile(profile._id || profile.id);
 };
 
 const closeModal = () => {
@@ -151,22 +145,20 @@ const handleSubmit = async ({ formData, pictureFile, attachmentFiles }) => {
       const profileId = editingProfile.value._id || editingProfile.value.id;
       
       // Update profile data
-      await store.dispatch('freelancerProfiles/updateProfile', {
+      await freelancerStore.updateProfile({
         profileId,
         profileData: formData
       });
 
-      // Upload picture if selected
       if (pictureFile) {
-        await store.dispatch('freelancerProfiles/uploadProfilePicture', {
+        await freelancerStore.uploadProfilePicture({
           profileId,
           pictureFile
         });
       }
 
-      // Upload attachments if selected
       if (attachmentFiles && attachmentFiles.length > 0) {
-        await store.dispatch('freelancerProfiles/uploadAttachments', {
+        await freelancerStore.uploadAttachments({
           profileId,
           files: attachmentFiles
         });
@@ -177,22 +169,20 @@ const handleSubmit = async ({ formData, pictureFile, attachmentFiles }) => {
       closeModal();
     } else {
       // Create new profile
-      const response = await store.dispatch('freelancerProfiles/createProfile', formData);
+      const response = await freelancerStore.createProfile(formData);
       
       if (response.ok && response.data && response.data.profile) {
         const newProfileId = response.data.profile._id || response.data.profile.id;
         
-        // Upload picture if selected
         if (pictureFile) {
-          await store.dispatch('freelancerProfiles/uploadProfilePicture', {
+          await freelancerStore.uploadProfilePicture({
             profileId: newProfileId,
             pictureFile
           });
         }
 
-        // Upload attachments if selected
         if (attachmentFiles && attachmentFiles.length > 0) {
-          await store.dispatch('freelancerProfiles/uploadAttachments', {
+          await freelancerStore.uploadAttachments({
             profileId: newProfileId,
             files: attachmentFiles
           });
