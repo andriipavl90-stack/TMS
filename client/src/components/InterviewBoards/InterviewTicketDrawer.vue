@@ -10,7 +10,7 @@
           <button v-if="canEdit" @click="isEditing = !isEditing" class="btn-edit">
             {{ isEditing ? 'Cancel Edit' : 'Edit' }}
           </button>
-          <button @click="close" class="close-btn">âœ•</button>
+          <button @click="close" class="close-btn">×</button>
         </div>
       </div>
 
@@ -111,7 +111,7 @@
                 </select>
               </div>
             </div>
-            <!-- ðŸ”¥ Schedule (EDIT ONLY) -->
+            <!-- Schedule (EDIT ONLY) -->
             <div class="form-row">
               <div class="form-group">
                 <label>Schedule Date</label>
