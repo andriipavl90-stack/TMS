@@ -4,7 +4,7 @@ import AuditLog from '../models/AuditLog.js';
  * Write an audit log entry
  * 
  * Common actions:
- * - USER_CREATE, USER_UPDATE, USER_RESET_PASSWORD (implemented)
+ * - USER_CREATE, USER_UPDATE, USER_RESET_PASSWORD, USER_DELETE (implemented)
  * - TICKET_MOVE_STAGE (to be implemented)
  * - SECRET_VIEW, SECRET_DOWNLOAD (to be implemented for freelancer accounts)
  * 

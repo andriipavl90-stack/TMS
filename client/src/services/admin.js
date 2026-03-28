@@ -68,3 +68,11 @@ export const resetUserPassword = async (userId) => {
   return response.data;
 };
 
+/**
+ * Delete a user
+ */
+export const deleteUser = async (userId) => {
+  const response = await apiClient.delete(`/admin/users/${userId}`);
+  return response.data;
+};
+

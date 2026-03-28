@@ -477,4 +477,55 @@ router.post('/users/:id/reset-password', async (req, res, next) => {
   }
 });
 
+// Delete user (admin only)
+router.delete('/users/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json(createErrorResponse(
+        'USER_NOT_FOUND',
+        'User not found',
+        404
+      ));
+    }
+
+    if (user._id.toString() === req.user._id.toString()) {
+      return res.status(400).json(createErrorResponse(
+        'CANNOT_DELETE_SELF',
+        'You cannot delete your own account',
+        400
+      ));
+    }
+
+    if (user.role === 'SUPER_ADMIN' && req.user.role !== 'SUPER_ADMIN') {
+      return res.status(403).json(createErrorResponse(
+        'INSUFFICIENT_PERMISSIONS',
+        'Cannot delete SUPER_ADMIN user',
+        403
+      ));
+    }
+
+    const deletedMeta = {
+      email: user.email,
+      name: user.name,
+      group: user.group,
+      degree: user.degree,
+      role: user.role
+    };
+
+    await User.findByIdAndDelete(id);
+
+    await auditLog(req, 'USER_DELETE', 'USER', id, {
+      ...getRequestMeta(req),
+      deletedUser: deletedMeta
+    });
+
+    res.json(createSuccessResponse(null, 'User deleted successfully'));
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

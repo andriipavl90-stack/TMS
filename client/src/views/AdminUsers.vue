@@ -77,13 +77,21 @@
             <td>{{ formatDate(user.createdAt) }}</td>
             <td>
               <div class="action-buttons">
-                <button @click="openEditModal(user)" class="btn-edit">Edit</button>
-                <button @click="handleResetPassword(user)" class="btn-reset">Reset Password</button>
+                <button type="button" @click="openEditModal(user)" class="btn-edit">Edit</button>
+                <button type="button" @click="handleResetPassword(user)" class="btn-reset">Reset Password</button>
+                <button
+                  v-if="canDeleteUser(user)"
+                  type="button"
+                  @click="openDeleteConfirm(user)"
+                  class="btn-delete"
+                >
+                  Delete
+                </button>
               </div>
             </td>
           </tr>
           <tr v-if="users.length === 0">
-            <td colspan="7" class="empty-state">
+            <td colspan="9" class="empty-state">
               No users found. Click "Add User" to create one.
             </td>
           </tr>
@@ -163,7 +171,11 @@
             </div>
             <div class="form-actions">
               <button type="button" @click="closeModal" class="btn-cancel">Cancel</button>
-              <button type="submit" :disabled="saving" class="btn-save">
+              <button
+                type="submit"
+                :disabled="saving || (!!tempPassword && !editingUser)"
+                class="btn-save"
+              >
                 {{ saving ? 'Saving...' : (editingUser ? 'Update' : 'Create') }}
               </button>
             </div>
@@ -231,6 +243,45 @@
           <p class="reset-modal-text reset-modal-error">{{ resetErrorMessage }}</p>
           <div class="form-actions reset-modal-actions">
             <button type="button" @click="closeResetError" class="btn-save">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete user: confirm -->
+    <div v-if="showDeleteConfirmModal" class="modal-overlay">
+      <div class="modal modal-reset" @click.stop>
+        <div class="modal-header">
+          <h2>Delete user?</h2>
+          <button type="button" @click="closeDeleteConfirm" class="close-btn">✕</button>
+        </div>
+        <div class="modal-content">
+          <p class="reset-modal-text">
+            Permanently delete <strong>{{ deleteTargetUser?.name }}</strong> ({{ deleteTargetUser?.email }})? This cannot be undone.
+          </p>
+          <div class="form-actions reset-modal-actions">
+            <button type="button" @click="closeDeleteConfirm" class="btn-cancel" :disabled="deletingUser">
+              Cancel
+            </button>
+            <button type="button" @click="executeDeleteUser" class="btn-delete-modal" :disabled="deletingUser">
+              {{ deletingUser ? 'Deleting…' : 'Delete user' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete user: error -->
+    <div v-if="showDeleteErrorModal" class="modal-overlay">
+      <div class="modal modal-reset" @click.stop>
+        <div class="modal-header">
+          <h2>Delete failed</h2>
+          <button type="button" @click="closeDeleteError" class="close-btn">✕</button>
+        </div>
+        <div class="modal-content">
+          <p class="reset-modal-text reset-modal-error">{{ deleteErrorMessage }}</p>
+          <div class="form-actions reset-modal-actions">
+            <button type="button" @click="closeDeleteError" class="btn-save">OK</button>
           </div>
         </div>
       </div>
@@ -334,7 +385,21 @@ const resetPasswordInitialCopyOk = ref(false);
 const showResetErrorModal = ref(false);
 const resetErrorMessage = ref('');
 
+const showDeleteConfirmModal = ref(false);
+const deleteTargetUser = ref(null);
+const deletingUser = ref(false);
+const showDeleteErrorModal = ref(false);
+const deleteErrorMessage = ref('');
+
 const isSuperAdmin = computed(() => authStore.user?.role === ROLES.SUPER_ADMIN);
+
+const canDeleteUser = (user) => {
+  const selfId = authStore.user?.id;
+  if (!selfId || !user?.id) return false;
+  if (String(user.id) === String(selfId)) return false;
+  if (user.role === 'SUPER_ADMIN' && !isSuperAdmin.value) return false;
+  return true;
+};
 
 // Group management (super admin only)
 const showGroupModal = ref(false);
@@ -437,10 +502,6 @@ const handleSubmit = async () => {
       if (response.ok && response.data) {
         tempPassword.value = response.data.tempPassword || '';
         await loadUsers();
-        // Don't close modal yet - show temp password
-        setTimeout(() => {
-          closeModal();
-        }, 5000); // Auto-close after 5 seconds
       }
     }
   } catch (err) {
@@ -489,6 +550,46 @@ const closeResetSuccess = () => {
 const closeResetError = () => {
   showResetErrorModal.value = false;
   resetErrorMessage.value = '';
+};
+
+const closeDeleteConfirm = () => {
+  if (deletingUser.value) return;
+  showDeleteConfirmModal.value = false;
+  deleteTargetUser.value = null;
+};
+
+const closeDeleteError = () => {
+  showDeleteErrorModal.value = false;
+  deleteErrorMessage.value = '';
+};
+
+const openDeleteConfirm = (user) => {
+  deleteTargetUser.value = user;
+  showDeleteConfirmModal.value = true;
+};
+
+const executeDeleteUser = async () => {
+  const user = deleteTargetUser.value;
+  if (!user) return;
+  deletingUser.value = true;
+  error.value = null;
+  try {
+    const response = await adminService.deleteUser(user.id);
+    if (response.ok) {
+      showDeleteConfirmModal.value = false;
+      deleteTargetUser.value = null;
+      await loadUsers();
+    }
+  } catch (err) {
+    const msg = err.response?.data?.message || 'Failed to delete user';
+    error.value = msg;
+    showDeleteConfirmModal.value = false;
+    deleteTargetUser.value = null;
+    deleteErrorMessage.value = msg;
+    showDeleteErrorModal.value = true;
+  } finally {
+    deletingUser.value = false;
+  }
 };
 
 const handleResetPassword = (user) => {
@@ -903,6 +1004,24 @@ const deleteGroup = async (group) => {
   box-shadow: var(--shadow-md);
 }
 
+.btn-delete {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  transition: all var(--transition-base);
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-delete:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
 .empty-state {
   text-align: center;
   padding: var(--spacing-3xl);
@@ -1170,6 +1289,29 @@ const deleteGroup = async (group) => {
   cursor: not-allowed;
 }
 
+.btn-delete-modal {
+  padding: var(--spacing-md) var(--spacing-xl);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
+}
+
+.btn-delete-modal:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-delete-modal:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
   .page-header {
     padding: var(--spacing-lg);
@@ -1197,7 +1339,8 @@ const deleteGroup = async (group) => {
   }
 
   .btn-edit,
-  .btn-reset {
+  .btn-reset,
+  .btn-delete {
     width: 100%;
   }
 }
