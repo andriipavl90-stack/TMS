@@ -64,7 +64,7 @@
                     <label>Description</label>
                     <textarea v-if="isEditing" v-model="form.description" rows="3" />
                     <div v-else class="muted">
-                        {{ assignment.description || '—' }}
+                        {{ assignment.description || 'â€”' }}
                     </div>
                 </div>
 
@@ -72,7 +72,7 @@
                     <label>Collaborator</label>
                     <input v-if="isEditing" v-model="form.collaborator" type="text" />
                     <div v-else class="muted">
-                        {{ assignment.collaborator || '—' }}
+                        {{ assignment.collaborator || 'â€”' }}
                     </div>
                 </div>
 
@@ -80,7 +80,7 @@
                     <label>Performance Type</label>
                     <input v-if="isEditing" v-model="form.performanceType" type="text" />
                     <div v-else class="muted">
-                        {{ assignment.performanceType || '—' }}
+                        {{ assignment.performanceType || 'â€”' }}
                     </div>
                 </div>
             </div>
@@ -103,7 +103,7 @@
                 <div class="field">
                     <label>Completed At</label>
                     <div class="muted">
-                        {{ assignment.completedAt ? formatDateTime(assignment.completedAt) : '—' }}
+                        {{ assignment.completedAt ? formatDateTime(assignment.completedAt) : 'â€”' }}
                     </div>
                 </div>
 
@@ -111,7 +111,7 @@
                     <label>Amount</label>
                     <input v-if="isEditing" type="number" v-model.number="form.currencyAmount" />
                     <div v-else>
-                        {{ assignment.currencyAmount || '—' }}
+                        {{ assignment.currencyAmount || 'â€”' }}
                     </div>
                 </div>
 
@@ -119,7 +119,7 @@
                     <label>Currency</label>
                     <input v-if="isEditing" v-model="form.currencyCode" type="text" />
                     <div v-else>
-                        {{ assignment.currencyCode || '—' }}
+                        {{ assignment.currencyCode || 'â€”' }}
                     </div>
                 </div>
 
@@ -127,7 +127,7 @@
                     <label>Pay Method</label>
                     <input v-if="isEditing" v-model="form.payMethod" type="text" />
                     <div v-else class="muted">
-                        {{ assignment.payMethod || '—' }}
+                        {{ assignment.payMethod || 'â€”' }}
                     </div>
                 </div>
 
@@ -135,7 +135,7 @@
                     <label>Note</label>
                     <textarea v-if="isEditing" v-model="form.note" rows="2" />
                     <div v-else class="muted">
-                        {{ assignment.note || '—' }}
+                        {{ assignment.note || 'â€”' }}
                     </div>
                 </div>
             </div>
@@ -164,7 +164,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { useAuthStore } from '../../stores/auth';
+import { useAuthStore } from '../../composables/useAuth';
 import {
     getAssignment,
     updateAssignment

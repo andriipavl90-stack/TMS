@@ -10,7 +10,7 @@ import MiniBarChart from '../components/finance/financeOverview/MiniBarChart.vue
 import FlowerShower from '../components/finance/financeOverview/FlowerShower.vue'
 import { formatMonth } from '../utils/financeHelpers'
 import * as financeService from '../services/finance'
-import { useAuthStore } from '../stores/auth'
+import { useAuthStore } from '../composables/useAuth'
 import { fetchUsers } from '../services/users'
 import { fetchGroups } from '../services/admin'
 
@@ -731,7 +731,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
 
     <!-- ERROR STATE -->
     <div v-if="error" class="error-container">
-      <div class="error-icon">⚠️</div>
+      <div class="error-icon">âš ï¸</div>
       <h3>Failed to load data</h3>
       <p>{{ error.message || 'Please try again later' }}</p>
       <button @click="loadFinanceOverview" class="retry-button">Retry</button>
@@ -743,7 +743,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
       <section v-if="byGroupSummary && byGroupSummary.length > 0" class="dashboard-section groups-summary-section">
         <div class="section-header">
           <h2 class="section-title">
-            <span class="title-icon">📋</span>
+            <span class="title-icon">ðŸ“‹</span>
             All Groups Summary - {{ formatMonth(selectedMonth) }}
           </h2>
         </div>
@@ -782,7 +782,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
       <section class="dashboard-section">
         <div class="section-header">
           <h2 class="section-title">
-            <span class="title-icon">📊</span>
+            <span class="title-icon">ðŸ“Š</span>
             Finance Overview
           </h2>
         </div>
@@ -959,7 +959,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
       <section v-if="computedWeekMetricsList && computedWeekMetricsList.length > 0" class="dashboard-section">
         <div class="section-header">
           <h2 class="section-title">
-            <span class="title-icon">📆</span>
+            <span class="title-icon">ðŸ“†</span>
             Weekly Breakdown
           </h2>
         </div>
@@ -991,7 +991,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
             <!-- Metrics Grid -->
             <div class="week-metrics-grid">
               <div class="week-metric-item">
-                <div class="week-metric-icon income-icon">💰</div>
+                <div class="week-metric-icon income-icon">ðŸ’°</div>
                 <div class="week-metric-content">
                   <span class="week-metric-label">Income</span>
                   <span class="week-metric-value income-value">{{ formatAmount(weekData.totalIncome) }}</span>
@@ -999,7 +999,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
               </div>
 
               <div class="week-metric-item">
-                <div class="week-metric-icon expense-icon">💸</div>
+                <div class="week-metric-icon expense-icon">ðŸ’¸</div>
                 <div class="week-metric-content">
                   <span class="week-metric-label">Outcome</span>
                   <span class="week-metric-value expense-value">{{ formatAmount(weekData.totalOutcome) }}</span>
@@ -1007,7 +1007,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
               </div>
 
               <div class="week-metric-item profit-item">
-                <div class="week-metric-icon profit-icon">📈</div>
+                <div class="week-metric-icon profit-icon">ðŸ“ˆ</div>
                 <div class="week-metric-content">
                   <span class="week-metric-label">Profit</span>
                   <span class="week-metric-value profit-value" :class="weekData.totalProfit >= 0 ? 'income-value' : 'expense-value'">
@@ -1017,7 +1017,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
               </div>
 
               <div class="week-metric-item">
-                <div class="week-metric-icon pending-icon">⏳</div>
+                <div class="week-metric-icon pending-icon">â³</div>
                 <div class="week-metric-content">
                   <span class="week-metric-label">Pending</span>
                   <span class="week-metric-value pending-value">{{ formatAmount(weekData.totalPending) }}</span>
@@ -1025,7 +1025,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
               </div>
 
               <div class="week-metric-item">
-                <div class="week-metric-icon result-icon">🎯</div>
+                <div class="week-metric-icon result-icon">ðŸŽ¯</div>
                 <div class="week-metric-content">
                   <span class="week-metric-label">Result</span>
                   <span class="week-metric-value" :class="weekData.resultAmount >= 0 ? 'income-value' : 'expense-value'">
@@ -1035,7 +1035,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
               </div>
 
               <div class="week-metric-item plan-item">
-                <div class="week-metric-icon plan-icon">📊</div>
+                <div class="week-metric-icon plan-icon">ðŸ“Š</div>
                 <div class="week-metric-content">
                   <span class="week-metric-label">Plan</span>
                   <span class="week-metric-value plan-value">{{ formatAmount(weekData.totalPlan) }}</span>
@@ -1082,7 +1082,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
       <section v-if="rankingMonthMetrics && rankingMonthMetrics.byUser && rankingMonthMetrics.byUser.length > 0" class="dashboard-section">
         <div class="section-header">
           <h2 class="section-title">
-            <span class="title-icon">🏆</span>
+            <span class="title-icon">ðŸ†</span>
             Monthly Member Ranking - {{ formatMonth(selectedMonth) }}
           </h2>
         </div>
@@ -1117,7 +1117,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
         <!-- User Summary Table -->
         <div class="user-summary-section">
           <h3 class="user-summary-title">
-            <span class="summary-icon">📊</span>
+            <span class="summary-icon">ðŸ“Š</span>
             Member Summary
           </h3>
           <div class="user-summary-grid">
@@ -1147,7 +1147,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
               
               <div class="user-metrics-grid">
                 <div class="user-metric-item">
-                  <div class="user-metric-icon income-icon">💰</div>
+                  <div class="user-metric-icon income-icon">ðŸ’°</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Income</span>
                     <span class="user-metric-value income-value">{{ formatAmount(user.income) }}</span>
@@ -1155,7 +1155,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item">
-                  <div class="user-metric-icon expense-icon">💸</div>
+                  <div class="user-metric-icon expense-icon">ðŸ’¸</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Outcome</span>
                     <span class="user-metric-value expense-value">{{ formatAmount(user.outcome) }}</span>
@@ -1163,7 +1163,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item profit-item">
-                  <div class="user-metric-icon profit-icon">📈</div>
+                  <div class="user-metric-icon profit-icon">ðŸ“ˆ</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Profit</span>
                     <span class="user-metric-value profit-value" :class="user.profit >= 0 ? 'income-value' : 'expense-value'">
@@ -1173,7 +1173,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item">
-                  <div class="user-metric-icon pending-icon">⏳</div>
+                  <div class="user-metric-icon pending-icon">â³</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Pending</span>
                     <span class="user-metric-value pending-value">{{ formatAmount(user.pending) }}</span>
@@ -1181,7 +1181,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item">
-                  <div class="user-metric-icon result-icon">🎯</div>
+                  <div class="user-metric-icon result-icon">ðŸŽ¯</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Result</span>
                     <span class="user-metric-value" :class="user.resultAmount >= 0 ? 'income-value' : 'expense-value'">
@@ -1191,7 +1191,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item plan-item">
-                  <div class="user-metric-icon plan-icon">📊</div>
+                  <div class="user-metric-icon plan-icon">ðŸ“Š</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Plan</span>
                     <span class="user-metric-value plan-value">{{ formatAmount(user.plan) }}</span>
@@ -1228,7 +1228,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
       <section v-if="rankingYearMetrics && rankingYearMetrics.byUser && rankingYearMetrics.byUser.length > 0" class="dashboard-section">
         <div class="section-header">
           <h2 class="section-title">
-            <span class="title-icon">🏆</span>
+            <span class="title-icon">ðŸ†</span>
             Annual Member Ranking - {{ selectedMonth.split('-')[0] }}
           </h2>
         </div>
@@ -1263,7 +1263,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
         <!-- User Summary Table -->
         <div class="user-summary-section">
           <h3 class="user-summary-title">
-            <span class="summary-icon">📊</span>
+            <span class="summary-icon">ðŸ“Š</span>
             Member Summary (All Months)
           </h3>
           <div class="user-summary-grid">
@@ -1288,7 +1288,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
               
               <div class="user-metrics-grid">
                 <div class="user-metric-item">
-                  <div class="user-metric-icon income-icon">💰</div>
+                  <div class="user-metric-icon income-icon">ðŸ’°</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Income</span>
                     <span class="user-metric-value income-value">{{ formatAmount(user.income) }}</span>
@@ -1296,7 +1296,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item">
-                  <div class="user-metric-icon expense-icon">💸</div>
+                  <div class="user-metric-icon expense-icon">ðŸ’¸</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Outcome</span>
                     <span class="user-metric-value expense-value">{{ formatAmount(user.outcome) }}</span>
@@ -1304,7 +1304,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item profit-item">
-                  <div class="user-metric-icon profit-icon">📈</div>
+                  <div class="user-metric-icon profit-icon">ðŸ“ˆ</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Profit</span>
                     <span class="user-metric-value profit-value" :class="user.profit >= 0 ? 'income-value' : 'expense-value'">
@@ -1314,7 +1314,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item">
-                  <div class="user-metric-icon pending-icon">⏳</div>
+                  <div class="user-metric-icon pending-icon">â³</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Pending</span>
                     <span class="user-metric-value pending-value">{{ formatAmount(user.pending) }}</span>
@@ -1322,7 +1322,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item">
-                  <div class="user-metric-icon result-icon">🎯</div>
+                  <div class="user-metric-icon result-icon">ðŸŽ¯</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Result</span>
                     <span class="user-metric-value" :class="user.resultAmount >= 0 ? 'income-value' : 'expense-value'">
@@ -1332,7 +1332,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item plan-item">
-                  <div class="user-metric-icon plan-icon">📊</div>
+                  <div class="user-metric-icon plan-icon">ðŸ“Š</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Plan</span>
                     <span class="user-metric-value plan-value">{{ formatAmount(user.plan) }}</span>

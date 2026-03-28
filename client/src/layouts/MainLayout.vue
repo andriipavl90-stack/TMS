@@ -220,7 +220,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { useAuthStore } from '../stores/auth';
+import { useAuthStore } from '../composables/useAuth';
 import { canViewAuditLogs, hasAnyRole } from '../utils/permissions';
 import { ROLES, LEGACY_ROLES } from '../constants/roles';
 

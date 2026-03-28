@@ -39,7 +39,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '../stores/auth';
+import { useAuthStore } from '../composables/useAuth';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -178,7 +178,7 @@ const handleSubmit = async () => {
 }
 
 .error-message::before {
-  content: '⚠️';
+  content: 'âš ï¸';
   font-size: var(--font-size-lg);
 }
 

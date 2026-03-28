@@ -72,7 +72,7 @@
       <div class="modal" @click.stop>
         <div class="modal-header">
           <h2>{{ editingProject ? 'Edit Project' : 'Create Project' }}</h2>
-          <button @click="closeModal" class="close-btn">✕</button>
+          <button @click="closeModal" class="close-btn">âœ•</button>
         </div>
         <div class="modal-content">
           <form @submit.prevent="handleSubmit">
@@ -129,7 +129,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '../stores/auth';
+import { useAuthStore } from '../composables/useAuth';
 import { isAdmin } from '../utils/permissions';
 import * as projectService from '../services/projects';
 

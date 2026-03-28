@@ -40,7 +40,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { usePersonalProfilesStore } from '../../../stores/personalProfiles';
+import { useStore } from 'vuex';
 
 const props = defineProps({
   profile: {
@@ -53,7 +53,7 @@ const props = defineProps({
   }
 });
 
-const personalStore = usePersonalProfilesStore();
+const store = useStore();
 const uploadAttachmentRef = ref(null);
 const uploading = ref(false);
 
@@ -71,7 +71,7 @@ const handleAttachmentUpload = async (event) => {
 
   uploading.value = true;
   try {
-    await personalStore.uploadAttachments({
+    await store.dispatch('personalProfiles/uploadAttachments', {
       profileId: props.profile._id || props.profile.id,
       files
     });
@@ -91,7 +91,7 @@ const handleDeleteAttachment = async (fileId) => {
   }
 
   try {
-    await personalStore.deleteAttachment({
+    await store.dispatch('personalProfiles/deleteAttachment', {
       profileId: props.profile._id || props.profile.id,
       fileId
     });

@@ -24,14 +24,14 @@
           <h3 class="board-title">{{ board.title }}</h3>
           <div class="board-actions" @click.stop>
             <button @click="openEditModal(board)" class="btn-icon" title="Edit">
-              ✏️
+              âœï¸
             </button>
             <button @click="openShareModal(board)" class="btn-icon" title="Share">
-              👥
+              ðŸ‘¥
             </button>
             <button v-if="canDelete(board)" @click="confirmDelete(board)" class="btn-icon btn-delete-icon"
               title="Delete">
-              🗑️
+              ðŸ—‘ï¸
             </button>
           </div>
         </div>
@@ -68,7 +68,7 @@
       <div class="modal" @click.stop>
         <div class="modal-header">
           <h2>{{ editingBoard ? 'Edit Board' : 'Create Board' }}</h2>
-          <button @click="closeModal" class="close-btn">✕</button>
+          <button @click="closeModal" class="close-btn">âœ•</button>
         </div>
         <div class="modal-content">
           <form @submit.prevent="handleSubmit">
@@ -113,7 +113,7 @@
       <div class="modal" @click.stop>
         <div class="modal-header">
           <h2>Share Board: {{ sharingBoard?.title }}</h2>
-          <button @click="closeShareModal" class="close-btn">✕</button>
+          <button @click="closeShareModal" class="close-btn">âœ•</button>
         </div>
         <div class="modal-content">
           <div class="form-group">
@@ -152,7 +152,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '../stores/auth';
+import { useAuthStore } from '../composables/useAuth';
 import * as boardService from '../services/interviewBoards';
 import * as userService from '../services/users';
 import { normalizeRole, ROLES } from '../constants/roles.js';

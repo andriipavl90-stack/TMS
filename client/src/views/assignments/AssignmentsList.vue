@@ -106,7 +106,7 @@
             <td>{{ formatGroupLabel(a?.group) }}</td>
             <td v-if="isAdminUser">
               <div class="member-name">
-                {{ a.ownerUserId?.name || '—' }}
+                {{ a.ownerUserId?.name || 'â€”' }}
               </div>
               <div class="member-email">
                 {{ a.ownerUserId?.email }}
@@ -125,13 +125,13 @@
               <span v-if="a.currencyAmount > 0">
                 {{ a.currencyAmount }} {{ a.currencyCode }}
               </span>
-              <span v-else class="muted">—</span>
+              <span v-else class="muted">â€”</span>
             </td>
 
             <td>{{ formatDate(a.createdAt) }}</td>
 
             <td>
-              {{ a.completedAt ? formatDate(a.completedAt) : '—' }}
+              {{ a.completedAt ? formatDate(a.completedAt) : 'â€”' }}
             </td>
 
             <td>
@@ -180,7 +180,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '../../stores/auth';
+import { useAuthStore } from '../../composables/useAuth';
 import * as assignmentService from '../../services/assignments';
 import { ENTITY_GROUP_OPTIONS, formatGroupLabel } from '../../constants/groups.js';
 

@@ -37,7 +37,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { useAuthStore } from '../../stores/auth';
+import { useAuthStore } from '../../composables/useAuth';
 import { normalizeRole, ROLES } from '../../constants/roles.js';
 import ProfileRow from './ProfileRow.vue';
 

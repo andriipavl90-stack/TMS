@@ -42,7 +42,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { useJobProfilesStore } from '../../../stores/jobProfiles';
+import { useStore } from 'vuex';
 
 const props = defineProps({
   profile: {
@@ -55,7 +55,7 @@ const props = defineProps({
   }
 });
 
-const jobProfilesStore = useJobProfilesStore();
+const store = useStore();
 const uploadAttachmentRef = ref(null);
 const uploading = ref(false);
 
@@ -73,7 +73,7 @@ const handleAttachmentUpload = async (event) => {
 
   uploading.value = true;
   try {
-    await jobProfilesStore.uploadAttachments({
+    await store.dispatch('jobProfiles/uploadAttachments', {
       profileId: props.profile._id || props.profile.id,
       files: [file]
     });
@@ -93,7 +93,7 @@ const handleDeleteAttachment = async (fileId) => {
   }
 
   try {
-    await jobProfilesStore.deleteAttachment({
+    await store.dispatch('jobProfiles/deleteAttachment', {
       profileId: props.profile._id || props.profile.id,
       fileId
     });

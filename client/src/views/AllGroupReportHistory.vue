@@ -39,7 +39,7 @@
           @click="filters.group = g.code"
         >
           {{ g.name.replace(/Group\s*/i, 'G') || g.code.replace('GROUP_', 'G') }}
-          <span v-if="getFilteredCountForGroup(g.code)">❗</span>
+          <span v-if="getFilteredCountForGroup(g.code)">â—</span>
         </button>
       </div>
       <div class="filter-3group">
@@ -73,7 +73,7 @@
             <td><b>{{ (item.username) }}</b></td>
             <!-- <td>{{ getAbbreviations(item) }}</td> -->
             <td :style="{ color: STATE_LABELS[item.state]?.color || '#6b7280' }">
-              {{ STATE_LABELS[item.state]?.text || '—' }}
+              {{ STATE_LABELS[item.state]?.text || 'â€”' }}
             </td>
           </tr>
 
@@ -96,7 +96,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import DailyReportView from './DailyReportView_ManagerChild.vue'
-import { useAuthStore } from '../stores/auth.js';
+import { useAuthStore } from '../composables/useAuth';
 import { getAll } from '../services/daily.js';
 import { fetchGroups } from '../services/admin.js';
 import { useToast } from 'vue-toastification';

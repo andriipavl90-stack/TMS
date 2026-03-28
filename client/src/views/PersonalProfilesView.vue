@@ -66,17 +66,19 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { storeToRefs } from 'pinia';
-import { useAuthStore } from '../stores/auth';
-import { usePersonalProfilesStore } from '../stores/personalProfiles';
+import { useStore } from 'vuex';
+import { useAuthStore } from '../composables/useAuth';
 import { canCreatePersonalProfile } from '../utils/profilePermissions';
 import PersonalProfileTable from '../components/personalProfiles/PersonalProfileTable.vue';
 import PersonalProfileModal from '../components/personalProfiles/PersonalProfileModal/PersonalProfileModal.vue';
 import PersonalProfileDrawer from '../components/personalProfiles/PersonalProfileDrawer/PersonalProfileDrawer.vue';
 
-const personalStore = usePersonalProfilesStore();
-const { profiles, loading, error } = storeToRefs(personalStore);
+const store = useStore();
 const authStore = useAuthStore();
+
+const profiles = computed(() => store.getters['personalProfiles/profiles']);
+const loading = computed(() => store.getters['personalProfiles/loading']);
+const error = computed(() => store.getters['personalProfiles/error']);
 
 const showModal = ref(false);
 const editingProfile = ref(null);
@@ -91,11 +93,11 @@ const canCreate = computed(() => {
 });
 
 const loadProfiles = async () => {
-  personalStore.setFilters({
+  await store.dispatch('personalProfiles/setFilters', {
     search: searchQuery.value,
     status: statusFilter.value
   });
-  await personalStore.fetchProfiles();
+  await store.dispatch('personalProfiles/fetchProfiles');
 };
 
 const handleSearch = () => {
@@ -115,7 +117,7 @@ const openCreateModal = () => {
 };
 
 const handleView = async (profile) => {
-  await personalStore.fetchProfile(profile._id || profile.id);
+  await store.dispatch('personalProfiles/fetchProfile', profile._id || profile.id);
 };
 
 const handleEdit = (profile) => {
@@ -128,7 +130,7 @@ const handleDelete = async (profile) => {
     return;
   }
 
-  await personalStore.deleteProfile(profile._id || profile.id);
+  await store.dispatch('personalProfiles/deleteProfile', profile._id || profile.id);
 };
 
 const closeModal = () => {
@@ -145,20 +147,20 @@ const handleSubmit = async ({ formData, pictureFile, attachmentFiles }) => {
       const profileId = editingProfile.value._id || editingProfile.value.id;
       
       // Update profile data
-      await personalStore.updateProfile({
+      await store.dispatch('personalProfiles/updateProfile', {
         profileId,
         profileData: formData
       });
 
       if (pictureFile) {
-        await personalStore.uploadProfilePicture({
+        await store.dispatch('personalProfiles/uploadProfilePicture', {
           profileId,
           pictureFile
         });
       }
 
       if (attachmentFiles && attachmentFiles.length > 0) {
-        await personalStore.uploadAttachments({
+        await store.dispatch('personalProfiles/uploadAttachments', {
           profileId,
           files: attachmentFiles
         });
@@ -169,20 +171,20 @@ const handleSubmit = async ({ formData, pictureFile, attachmentFiles }) => {
       closeModal();
     } else {
       // Create new profile
-      const response = await personalStore.createProfile(formData);
+      const response = await store.dispatch('personalProfiles/createProfile', formData);
       
       if (response.ok && response.data && response.data.profile) {
         const newProfileId = response.data.profile._id || response.data.profile.id;
         
         if (pictureFile) {
-          await personalStore.uploadProfilePicture({
+          await store.dispatch('personalProfiles/uploadProfilePicture', {
             profileId: newProfileId,
             pictureFile
           });
         }
 
         if (attachmentFiles && attachmentFiles.length > 0) {
-          await personalStore.uploadAttachments({
+          await store.dispatch('personalProfiles/uploadAttachments', {
             profileId: newProfileId,
             files: attachmentFiles
           });

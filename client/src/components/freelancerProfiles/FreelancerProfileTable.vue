@@ -37,7 +37,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { useAuthStore } from '../../stores/auth';
+import { useAuthStore } from '../../composables/useAuth';
 import { canCreateFreelancerProfile } from '../../utils/profilePermissions';
 import FreelancerProfileRow from './FreelancerProfileRow.vue';
 

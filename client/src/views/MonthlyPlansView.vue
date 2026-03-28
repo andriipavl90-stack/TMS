@@ -207,7 +207,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useFinance } from '../composables/useFinance';
-import { useAuthStore } from '../stores/auth';
+import { useAuthStore } from '../composables/useAuth';
 import { fetchUsers } from '../services/users';
 import { excludeSuperAdmin } from '../utils/userFilters';
 import { formatCurrency, formatMonth, getCurrentMonth } from '../utils/financeHelpers';

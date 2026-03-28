@@ -66,17 +66,20 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { storeToRefs } from 'pinia';
-import { useAuthStore } from '../stores/auth';
-import { useFreelancerProfilesStore } from '../stores/freelancerProfiles';
+import { useStore } from 'vuex';
+import { useAuthStore } from '../composables/useAuth';
 import { canCreateFreelancerProfile } from '../utils/profilePermissions';
 import FreelancerProfileTable from '../components/freelancerProfiles/FreelancerProfileTable.vue';
 import FreelancerProfileModal from '../components/freelancerProfiles/FreelancerProfileModal/FreelancerProfileModal.vue';
 import FreelancerProfileDrawer from '../components/freelancerProfiles/FreelancerProfileDrawer/FreelancerProfileDrawer.vue';
 
-const freelancerStore = useFreelancerProfilesStore();
-const { profiles, loading, error, selectedProfile } = storeToRefs(freelancerStore);
+const store = useStore();
 const authStore = useAuthStore();
+
+const profiles = computed(() => store.getters['freelancerProfiles/profiles']);
+const loading = computed(() => store.getters['freelancerProfiles/loading']);
+const error = computed(() => store.getters['freelancerProfiles/error']);
+const selectedProfile = computed(() => store.getters['freelancerProfiles/selectedProfile']);
 
 const showModal = ref(false);
 const editingProfile = ref(null);
@@ -91,11 +94,11 @@ const canCreate = computed(() => {
 });
 
 const loadProfiles = async () => {
-  freelancerStore.setFilters({
+  await store.dispatch('freelancerProfiles/setFilters', {
     search: searchQuery.value,
     status: statusFilter.value
   });
-  await freelancerStore.fetchProfiles();
+  await store.dispatch('freelancerProfiles/fetchProfiles');
 };
 
 const handleSearch = () => {
@@ -115,7 +118,7 @@ const openCreateModal = () => {
 };
 
 const handleView = async (profile) => {
-  await freelancerStore.fetchProfile(profile._id || profile.id);
+  await store.dispatch('freelancerProfiles/fetchProfile', profile._id || profile.id);
 };
 
 const handleEdit = (profile) => {
@@ -128,7 +131,7 @@ const handleDelete = async (profile) => {
     return;
   }
 
-  await freelancerStore.deleteProfile(profile._id || profile.id);
+  await store.dispatch('freelancerProfiles/deleteProfile', profile._id || profile.id);
 };
 
 const closeModal = () => {
@@ -145,20 +148,20 @@ const handleSubmit = async ({ formData, pictureFile, attachmentFiles }) => {
       const profileId = editingProfile.value._id || editingProfile.value.id;
       
       // Update profile data
-      await freelancerStore.updateProfile({
+      await store.dispatch('freelancerProfiles/updateProfile', {
         profileId,
         profileData: formData
       });
 
       if (pictureFile) {
-        await freelancerStore.uploadProfilePicture({
+        await store.dispatch('freelancerProfiles/uploadProfilePicture', {
           profileId,
           pictureFile
         });
       }
 
       if (attachmentFiles && attachmentFiles.length > 0) {
-        await freelancerStore.uploadAttachments({
+        await store.dispatch('freelancerProfiles/uploadAttachments', {
           profileId,
           files: attachmentFiles
         });
@@ -169,20 +172,20 @@ const handleSubmit = async ({ formData, pictureFile, attachmentFiles }) => {
       closeModal();
     } else {
       // Create new profile
-      const response = await freelancerStore.createProfile(formData);
+      const response = await store.dispatch('freelancerProfiles/createProfile', formData);
       
       if (response.ok && response.data && response.data.profile) {
         const newProfileId = response.data.profile._id || response.data.profile.id;
         
         if (pictureFile) {
-          await freelancerStore.uploadProfilePicture({
+          await store.dispatch('freelancerProfiles/uploadProfilePicture', {
             profileId: newProfileId,
             pictureFile
           });
         }
 
         if (attachmentFiles && attachmentFiles.length > 0) {
-          await freelancerStore.uploadAttachments({
+          await store.dispatch('freelancerProfiles/uploadAttachments', {
             profileId: newProfileId,
             files: attachmentFiles
           });

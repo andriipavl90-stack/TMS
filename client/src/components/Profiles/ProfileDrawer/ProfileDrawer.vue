@@ -197,9 +197,8 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { storeToRefs } from 'pinia';
-import { useAuthStore } from '../../../stores/auth';
-import { useJobProfilesStore } from '../../../stores/jobProfiles';
+import { useStore } from 'vuex';
+import { useAuthStore } from '../../../composables/useAuth';
 import { normalizeRole, ROLES } from '../../../constants/roles.js';
 import { ENTITY_GROUP_OPTIONS, formatGroupLabel, DEFAULT_ENTITY_GROUP } from '../../../constants/groups.js';
 import ProfileHeader from './ProfileHeader.vue';
@@ -207,9 +206,11 @@ import ProfilePicture from './ProfilePicture.vue';
 import ProfileAttachments from './ProfileAttachments.vue';
 
 const entityGroupOptions = ENTITY_GROUP_OPTIONS;
-const jobProfilesStore = useJobProfilesStore();
-const { selectedProfile, hasSelectedProfile } = storeToRefs(jobProfilesStore);
+const store = useStore();
 const authStore = useAuthStore();
+
+const selectedProfile = computed(() => store.getters['jobProfiles/selectedProfile']);
+const hasSelectedProfile = computed(() => store.getters['jobProfiles/hasSelectedProfile']);
 
 const isEditing = ref(false);
 const saving = ref(false);
@@ -308,7 +309,7 @@ const handleUpdate = async () => {
 
   saving.value = true;
   try {
-    await jobProfilesStore.updateProfile({
+    await store.dispatch('jobProfiles/updateProfile', {
       profileId: profile._id || profile.id,
       profileData: editForm.value
     });
@@ -322,7 +323,7 @@ const handleUpdate = async () => {
 
 const handleClose = () => {
   isEditing.value = false;
-  jobProfilesStore.clearSelectedProfile();
+  store.dispatch('jobProfiles/clearSelectedProfile');
 };
 
 const handleOverlayClick = () => {

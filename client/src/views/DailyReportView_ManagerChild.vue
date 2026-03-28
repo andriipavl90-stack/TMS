@@ -64,7 +64,7 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
-import { useAuthStore } from '../stores/auth';
+import { useAuthStore } from '../composables/useAuth';
 import { updateDaily, getAll } from '../services/daily';
 import { useToast } from 'vue-toastification';
 import ReportSectionCard from '../components/reports/ReportSectionCard.vue';

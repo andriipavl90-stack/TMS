@@ -71,7 +71,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import DailyReportView from './DailyReportView_MemberChild.vue'
-import { useAuthStore } from '../stores/auth';
+import { useAuthStore } from '../composables/useAuth';
 import { getDailys } from '../services/daily.js';
 import { useToast } from 'vue-toastification';
 

@@ -183,7 +183,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useFinance } from '../composables/useFinance';
-import { useAuthStore } from '../stores/auth';
+import { useAuthStore } from '../composables/useAuth';
 import { fetchUsers } from '../services/users';
 import { excludeSuperAdmin } from '../utils/userFilters';
 import TransactionsTable from '../components/finance/TransactionsTable.vue';

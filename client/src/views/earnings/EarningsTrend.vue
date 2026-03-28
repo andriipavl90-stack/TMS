@@ -88,7 +88,7 @@
   
   <script setup>
   import { ref, computed, onMounted } from 'vue';
-  import { useAuthStore } from '../../stores/auth';
+  import { useAuthStore } from '../../composables/useAuth';
   import { fetchEarningsTrend } from '../../services/assignments';
   
   const authStore = useAuthStore();

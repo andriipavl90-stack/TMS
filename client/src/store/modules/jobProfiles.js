@@ -1,8 +1,7 @@
-import * as profileService from '../services/jobProfiles';
-import { defineProfileCollectionStore } from './profileCollectionStore';
+import * as profileService from '../../services/jobProfiles';
+import { buildProfileCollectionModule } from './profileCollectionFactory';
 
-export const useJobProfilesStore = defineProfileCollectionStore(
-  'jobProfiles',
+export default buildProfileCollectionModule(
   {
     fetchProfiles: profileService.fetchJobProfiles,
     getProfile: profileService.getJobProfile,

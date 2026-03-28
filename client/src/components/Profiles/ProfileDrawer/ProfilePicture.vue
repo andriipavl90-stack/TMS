@@ -18,7 +18,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { useJobProfilesStore } from '../../../stores/jobProfiles';
+import { useStore } from 'vuex';
 
 const props = defineProps({
   profile: {
@@ -27,7 +27,7 @@ const props = defineProps({
   }
 });
 
-const jobProfilesStore = useJobProfilesStore();
+const store = useStore();
 const uploadPictureRef = ref(null);
 const uploading = ref(false);
 
@@ -47,7 +47,7 @@ const handlePictureUpload = async (event) => {
 
   uploading.value = true;
   try {
-    await jobProfilesStore.uploadProfilePicture({
+    await store.dispatch('jobProfiles/uploadProfilePicture', {
       profileId: props.profile._id || props.profile.id,
       pictureFile: file
     });

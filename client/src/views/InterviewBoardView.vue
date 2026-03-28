@@ -2,7 +2,7 @@
   <div class="interview-board-view">
     <div class="page-header">
       <div class="header-left">
-        <button @click="goBack" class="btn-back">← Back</button>
+        <button @click="goBack" class="btn-back">â† Back</button>
         <div>
           <h1>{{ board?.title || 'Loading...' }}</h1>
           <p v-if="board?.description" class="subtitle">{{ board.description }}</p>
@@ -64,7 +64,7 @@
       <div class="modal modal-large" @click.stop>
         <div class="modal-header">
           <h2>Create Interview Ticket</h2>
-          <button @click="closeCreateModal" class="close-btn">✕</button>
+          <button @click="closeCreateModal" class="close-btn">âœ•</button>
         </div>
         <div class="modal-content">
           <form @submit.prevent="handleCreateTicket">
@@ -166,7 +166,7 @@
       <div class="modal" @click.stop>
         <div class="modal-header">
           <h2>Create Stage</h2>
-          <button @click="closeCreateStageModal" class="close-btn">✕</button>
+          <button @click="closeCreateStageModal" class="close-btn">âœ•</button>
         </div>
         <div class="modal-content">
           <form @submit.prevent="handleCreateStage">
@@ -198,7 +198,7 @@
       <div class="modal" @click.stop>
         <div class="modal-header">
           <h2>Edit Stage</h2>
-          <button @click="closeEditStageModal" class="close-btn">✕</button>
+          <button @click="closeEditStageModal" class="close-btn">âœ•</button>
         </div>
         <div class="modal-content">
           <form @submit.prevent="handleUpdateStage">
@@ -230,7 +230,7 @@
       <div class="modal" @click.stop>
         <div class="modal-header">
           <h2>Delete Stage</h2>
-          <button @click="closeDeleteStageModal" class="close-btn">✕</button>
+          <button @click="closeDeleteStageModal" class="close-btn">âœ•</button>
         </div>
         <div class="modal-content">
           <div v-if="deleteStageError" class="error-message">
@@ -238,7 +238,7 @@
           </div>
           <p>Are you sure you want to delete the stage <strong>"{{ deletingStage.name }}"</strong>?</p>
           <p v-if="ticketsByStage[deletingStage._id]?.length > 0" class="warning-message">
-            ⚠️ This stage has {{ ticketsByStage[deletingStage._id].length }} ticket(s).
+            âš ï¸ This stage has {{ ticketsByStage[deletingStage._id].length }} ticket(s).
             Please move or delete all tickets before deleting this stage.
           </p>
           <div class="form-actions">
@@ -257,7 +257,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useAuthStore } from '../stores/auth';
+import { useAuthStore } from '../composables/useAuth';
 import { normalizeRole, ROLES } from '../constants/roles.js';
 import * as boardService from '../services/interviewBoards';
 import * as userService from '../services/users';
@@ -365,7 +365,7 @@ const openCreateModalForDay = (day) => {
     notes: ''
   };
 
-  // 🔥 schedule defaults
+  // ðŸ”¥ schedule defaults
   scheduleDate.value = day;
   scheduleTime.value = '09:00';
   durationMinutes.value = 60;
@@ -622,7 +622,7 @@ const handleCreateTicket = async () => {
       candidateName, // Include candidateName for backward compatibility
       tags,
       dates: [{
-        scheduledAt: buildScheduledAt(),   // 🔥 local time
+        scheduledAt: buildScheduledAt(),   // ðŸ”¥ local time
         durationMinutes: durationMinutes.value,
         status: 'scheduled'
       }],
@@ -630,8 +630,8 @@ const handleCreateTicket = async () => {
 
     const response = await boardService.createInterviewTicket(boardId.value, ticketData);
     if (response.ok) {
-      tickets.value.unshift(response.data.ticket); // 🔥 instant UI
-      timeViewKey.value++;                         // 🔥 refresh Time View
+      tickets.value.unshift(response.data.ticket); // ðŸ”¥ instant UI
+      timeViewKey.value++;                         // ðŸ”¥ refresh Time View
       closeCreateModal();
     }
   } catch (err) {

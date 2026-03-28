@@ -190,9 +190,8 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { storeToRefs } from 'pinia';
-import { useAuthStore } from '../../../stores/auth';
-import { useFreelancerProfilesStore } from '../../../stores/freelancerProfiles';
+import { useStore } from 'vuex';
+import { useAuthStore } from '../../../composables/useAuth';
 import { canEditFreelancerProfile } from '../../../utils/profilePermissions';
 import { ENTITY_GROUP_OPTIONS, formatGroupLabel, DEFAULT_ENTITY_GROUP } from '../../../constants/groups.js';
 import ProfileHeader from '../../Profiles/ProfileDrawer/ProfileHeader.vue';
@@ -201,9 +200,11 @@ import FreelancerProfileAttachments from './FreelancerProfileAttachments.vue';
 
 const entityGroupOptions = ENTITY_GROUP_OPTIONS;
 
-const freelancerStore = useFreelancerProfilesStore();
-const { selectedProfile, hasSelectedProfile } = storeToRefs(freelancerStore);
+const store = useStore();
 const authStore = useAuthStore();
+
+const selectedProfile = computed(() => store.getters['freelancerProfiles/selectedProfile']);
+const hasSelectedProfile = computed(() => store.getters['freelancerProfiles/hasSelectedProfile']);
 
 const isEditing = ref(false);
 const saving = ref(false);
@@ -274,7 +275,7 @@ const handleUpdate = async () => {
 
   saving.value = true;
   try {
-    await freelancerStore.updateProfile({
+    await store.dispatch('freelancerProfiles/updateProfile', {
       profileId: profile._id || profile.id,
       profileData: editForm.value
     });
@@ -288,7 +289,7 @@ const handleUpdate = async () => {
 
 const handleClose = () => {
   isEditing.value = false;
-  freelancerStore.clearSelectedProfile();
+  store.dispatch('freelancerProfiles/clearSelectedProfile');
 };
 
 const handleOverlayClick = () => {

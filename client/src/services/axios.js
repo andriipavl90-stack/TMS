@@ -57,8 +57,8 @@ apiClient.interceptors.response.use(
     // Handle 401 Unauthorized
     if (error.response?.status === 401) {
       toast.error('Session expired. Please login again.');
-      import('../stores/auth.js').then(({ useAuthStore }) => {
-        useAuthStore().logout();
+      import('../store/index.js').then((m) => {
+        m.default.dispatch('auth/logout');
       });
       return Promise.reject(error);
     }

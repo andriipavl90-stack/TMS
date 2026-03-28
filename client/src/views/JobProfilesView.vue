@@ -70,18 +70,20 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { storeToRefs } from 'pinia';
-import { useAuthStore } from '../stores/auth';
-import { useJobProfilesStore } from '../stores/jobProfiles';
+import { useStore } from 'vuex';
+import { useAuthStore } from '../composables/useAuth';
 import { normalizeRole, ROLES } from '../constants/roles.js';
 import { fetchGroups } from '../services/admin.js';
 import ProfileTable from '../components/Profiles/ProfileTable.vue';
 import ProfileModal from '../components/Profiles/ProfileModal/ProfileModal.vue';
 import ProfileDrawer from '../components/Profiles/ProfileDrawer/ProfileDrawer.vue';
 
-const jobProfilesStore = useJobProfilesStore();
-const { profiles, loading, error } = storeToRefs(jobProfilesStore);
+const store = useStore();
 const authStore = useAuthStore();
+
+const profiles = computed(() => store.getters['jobProfiles/profiles']);
+const loading = computed(() => store.getters['jobProfiles/loading']);
+const error = computed(() => store.getters['jobProfiles/error']);
 
 const showModal = ref(false);
 const editingProfile = ref(null);
@@ -102,12 +104,12 @@ const canCreate = computed(() => {
 });
 
 const loadProfiles = async () => {
-  jobProfilesStore.setFilters({
+  await store.dispatch('jobProfiles/setFilters', {
     search: searchQuery.value,
     status: statusFilter.value,
     group: groupFilter.value
   });
-  await jobProfilesStore.fetchProfiles();
+  await store.dispatch('jobProfiles/fetchProfiles');
 };
 
 const loadGroups = async () => {
@@ -136,7 +138,7 @@ const openCreateModal = () => {
 };
 
 const handleView = async (profile) => {
-  await jobProfilesStore.fetchProfile(profile._id || profile.id);
+  await store.dispatch('jobProfiles/fetchProfile', profile._id || profile.id);
 };
 
 const handleEdit = (profile) => {
@@ -149,7 +151,7 @@ const handleDelete = async (profile) => {
     return;
   }
 
-  await jobProfilesStore.deleteProfile(profile._id || profile.id);
+  await store.dispatch('jobProfiles/deleteProfile', profile._id || profile.id);
 };
 
 const closeModal = () => {
@@ -166,20 +168,20 @@ const handleSubmit = async ({ formData, pictureFile, attachmentFiles }) => {
       const profileId = editingProfile.value._id || editingProfile.value.id;
       
       // Update profile data
-      await jobProfilesStore.updateProfile({
+      await store.dispatch('jobProfiles/updateProfile', {
         profileId,
         profileData: formData
       });
 
       if (pictureFile) {
-        await jobProfilesStore.uploadProfilePicture({
+        await store.dispatch('jobProfiles/uploadProfilePicture', {
           profileId,
           pictureFile
         });
       }
 
       if (attachmentFiles && attachmentFiles.length > 0) {
-        await jobProfilesStore.uploadAttachments({
+        await store.dispatch('jobProfiles/uploadAttachments', {
           profileId,
           files: attachmentFiles
         });
@@ -190,20 +192,20 @@ const handleSubmit = async ({ formData, pictureFile, attachmentFiles }) => {
       closeModal();
     } else {
       // Create new profile
-      const response = await jobProfilesStore.createProfile(formData);
+      const response = await store.dispatch('jobProfiles/createProfile', formData);
       
       if (response.ok && response.data && response.data.profile) {
         const newProfileId = response.data.profile._id || response.data.profile.id;
         
         if (pictureFile) {
-          await jobProfilesStore.uploadProfilePicture({
+          await store.dispatch('jobProfiles/uploadProfilePicture', {
             profileId: newProfileId,
             pictureFile
           });
         }
 
         if (attachmentFiles && attachmentFiles.length > 0) {
-          await jobProfilesStore.uploadAttachments({
+          await store.dispatch('jobProfiles/uploadAttachments', {
             profileId: newProfileId,
             files: attachmentFiles
           });

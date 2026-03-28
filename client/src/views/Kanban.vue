@@ -52,7 +52,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useJobTicketsStore } from '../stores/jobTickets';
+import { useStore } from 'vuex';
 import KanbanFilters from '../components/Kanban/KanbanFilters.vue';
 import KanbanColumn from '../components/Kanban/KanbanColumn.vue';
 import TicketDetailDrawer from '../components/Kanban/TicketDetailDrawer.vue';
@@ -62,7 +62,7 @@ import apiClient from '../services/axios';
 
 const route = useRoute();
 const router = useRouter();
-const ticketsStore = useJobTicketsStore();
+const vuexStore = useStore();
 
 const loading = ref(false);
 const error = ref(null);
@@ -107,8 +107,8 @@ if (!filters.value.dateFrom && !filters.value.dateTo) {
   filters.value.dateTo = today.toISOString().split('T')[0];
 }
 
-const tickets = computed(() => ticketsStore.tickets);
-const ticketsByStage = computed(() => ticketsStore.ticketsByStage);
+const tickets = computed(() => vuexStore.getters['jobTickets/tickets']);
+const ticketsByStage = computed(() => vuexStore.getters['jobTickets/ticketsByStage']);
 
 // Load users and profiles for filters
 const loadUsersAndProfiles = async () => {
@@ -163,7 +163,7 @@ const loadTickets = async () => {
   error.value = null;
 
   try {
-    await ticketsStore.fetchTickets(filters.value);
+    await vuexStore.dispatch('jobTickets/fetchTickets', filters.value);
     await loadInterviewCounts();
   } catch (err) {
     error.value = err.message || 'Failed to load tickets';
@@ -209,7 +209,11 @@ const handleStageDrop = async (ticketId, newStage) => {
     ticket.currentStage = newStage;
 
     // Call API to move stage
-    await ticketsStore.moveStage(ticketId, newStage, '');
+    await vuexStore.dispatch('jobTickets/moveStage', {
+      ticketId,
+      toStage: newStage,
+      reason: ''
+    });
     
     // Reload to get updated data with stage history
     await loadTickets();
@@ -224,7 +228,7 @@ const handleStageDrop = async (ticketId, newStage) => {
 const handleTicketClick = async (ticket) => {
   try {
     // Fetch full ticket details with all populated fields
-    const fullTicket = await ticketsStore.fetchTicket(ticket._id);
+    const fullTicket = await vuexStore.dispatch('jobTickets/fetchTicket', ticket._id);
     selectedTicket.value = fullTicket;
   } catch (err) {
     error.value = err.message || 'Failed to load ticket details';

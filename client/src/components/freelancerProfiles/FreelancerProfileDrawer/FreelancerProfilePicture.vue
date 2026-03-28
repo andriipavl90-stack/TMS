@@ -17,7 +17,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { useFreelancerProfilesStore } from '../../../stores/freelancerProfiles';
+import { useStore } from 'vuex';
 
 const props = defineProps({
   profile: {
@@ -26,7 +26,7 @@ const props = defineProps({
   }
 });
 
-const freelancerStore = useFreelancerProfilesStore();
+const store = useStore();
 const uploadPictureRef = ref(null);
 const uploading = ref(false);
 
@@ -46,7 +46,7 @@ const handlePictureUpload = async (event) => {
 
   uploading.value = true;
   try {
-    await freelancerStore.uploadProfilePicture({
+    await store.dispatch('freelancerProfiles/uploadProfilePicture', {
       profileId: props.profile._id || props.profile.id,
       pictureFile: file
     });

@@ -72,7 +72,7 @@
           placeholder="Enter tags separated by commas (e.g., developer, remote, senior)" @blur="updateTags"
           @keyup.enter="updateTags" />
         <div v-if="form.tags.length > 0" class="tags-preview"> <span v-for="tag in form.tags" :key="tag"
-            class="tag-preview"> {{ tag }} <button type="button" @click="removeTag(tag)" class="tag-remove">✕</button>
+            class="tag-preview"> {{ tag }} <button type="button" @click="removeTag(tag)" class="tag-remove">âœ•</button>
           </span> </div>
       </div>
     </div> <!-- Notes Section -->
@@ -89,7 +89,7 @@
 </template>
 <script setup>
 import { ref, watch, computed } from 'vue';
-import { useAuthStore } from '../../../stores/auth';
+import { useAuthStore } from '../../../composables/useAuth';
 import { normalizeRole, ROLES } from '../../../constants/roles.js';
 import { ENTITY_GROUP_OPTIONS, DEFAULT_ENTITY_GROUP } from '../../../constants/groups.js';
 import FileUploadSection from './FileUploadSection.vue';

@@ -68,7 +68,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { useAuthStore } from '../../stores/auth';
+import { useAuthStore } from '../../composables/useAuth';
 import { 
   canEditPersonalProfile, 
   canDeletePersonalProfile 

@@ -36,7 +36,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { useAuthStore } from '../../stores/auth';
+import { useAuthStore } from '../../composables/useAuth';
 import { canCreatePersonalProfile } from '../../utils/profilePermissions';
 import PersonalProfileRow from './PersonalProfileRow.vue';
 

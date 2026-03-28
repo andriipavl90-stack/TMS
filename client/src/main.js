@@ -1,15 +1,14 @@
 import { createApp } from 'vue';
-import { createPinia } from 'pinia';
 import App from './App.vue';
 import router from './router';
+import store from './store';
 import Toast from 'vue-toastification';
 import CKEditor from '@ckeditor/ckeditor5-vue';
 import 'vue-toastification/dist/index.css';
 
 const app = createApp(App);
 app.use(CKEditor);
-const pinia = createPinia();
-app.use(pinia);
+app.use(store);
 app.use(router);
 
 app.use(Toast, {
@@ -30,4 +29,5 @@ app.use(Toast, {
   rtl: false
 });
 
+store.dispatch('auth/restoreAuth');
 app.mount('#app');

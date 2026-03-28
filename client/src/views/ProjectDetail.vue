@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="page-header">
       <div class="header-left">
-        <button @click="goBack" class="btn-back">← Back</button>
+        <button @click="goBack" class="btn-back">â† Back</button>
         <div>
           <h1>{{ project?.name || 'Loading...' }}</h1>
           <p v-if="project?.description" class="subtitle">{{ project.description }}</p>
@@ -147,7 +147,7 @@
       <div class="modal" @click.stop>
         <div class="modal-header">
           <h2>Edit Project</h2>
-          <button @click="closeEditModal" class="close-btn">✕</button>
+          <button @click="closeEditModal" class="close-btn">âœ•</button>
         </div>
         <div class="modal-content">
           <form @submit.prevent="handleUpdateProject">
@@ -203,7 +203,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useAuthStore } from '../stores/auth';
+import { useAuthStore } from '../composables/useAuth';
 import { isAdmin } from '../utils/permissions';
 import * as projectService from '../services/projects';
 import * as userService from '../services/users';

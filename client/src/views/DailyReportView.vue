@@ -60,7 +60,7 @@
 
 <script setup>
 import { ref, onMounted, nextTick, computed } from 'vue';
-import { useAuthStore } from '../stores/auth';
+import { useAuthStore } from '../composables/useAuth';
 import { getDailys, updateDaily } from '../services/daily';
 import { useToast } from 'vue-toastification';
 import ReportSectionCard from '../components/reports/ReportSectionCard.vue';

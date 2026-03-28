@@ -17,7 +17,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { usePersonalProfilesStore } from '../../../stores/personalProfiles';
+import { useStore } from 'vuex';
 
 const props = defineProps({
   profile: {
@@ -26,7 +26,7 @@ const props = defineProps({
   }
 });
 
-const personalStore = usePersonalProfilesStore();
+const store = useStore();
 const uploadPictureRef = ref(null);
 const uploading = ref(false);
 
@@ -46,7 +46,7 @@ const handlePictureUpload = async (event) => {
 
   uploading.value = true;
   try {
-    await personalStore.uploadProfilePicture({
+    await store.dispatch('personalProfiles/uploadProfilePicture', {
       profileId: props.profile._id || props.profile.id,
       pictureFile: file
     });

@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { useAuthStore } from '../stores/auth';
+import store from '../store';
 import { canAccessAdmin, canViewAuditLogs, hasAnyRole } from '../utils/permissions';
 import { ROLES, LEGACY_ROLES } from '../constants/roles.js';
 const FINANCE_ADMIN_ROLES = [
@@ -237,16 +237,12 @@ const router = createRouter({
 
 // Route guard - requireAuth
 router.beforeEach((to, from, next) => {
-  const authStore = useAuthStore();
-
-  // Check localStorage directly for authentication status (source of truth)
   const hasToken = !!localStorage.getItem('token');
   const hasUser = !!localStorage.getItem('user');
   const isAuthenticated = hasToken && hasUser;
 
-  // Restore auth from localStorage if needed (but only if both token and user exist)
-  if (!authStore.isAuthenticated && isAuthenticated) {
-    authStore.restoreAuth();
+  if (!store.getters['auth/isAuthenticated'] && isAuthenticated) {
+    store.dispatch('auth/restoreAuth');
   }
 
   // Check if route requires authentication - use localStorage check for immediate response
@@ -262,7 +258,7 @@ router.beforeEach((to, from, next) => {
       : [to.meta.requiresRole];
 
     // Get user from store or localStorage
-    let user = authStore.user;
+    let user = store.state.auth.user;
     if (!user && hasUser) {
       try {
         user = JSON.parse(localStorage.getItem('user'));

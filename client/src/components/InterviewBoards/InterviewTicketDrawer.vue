@@ -10,7 +10,7 @@
           <button v-if="canEdit" @click="isEditing = !isEditing" class="btn-edit">
             {{ isEditing ? 'Cancel Edit' : 'Edit' }}
           </button>
-          <button @click="close" class="close-btn">✕</button>
+          <button @click="close" class="close-btn">âœ•</button>
         </div>
       </div>
 
@@ -111,7 +111,7 @@
                 </select>
               </div>
             </div>
-            <!-- 🔥 Schedule (EDIT ONLY) -->
+            <!-- ðŸ”¥ Schedule (EDIT ONLY) -->
             <div class="form-row">
               <div class="form-group">
                 <label>Schedule Date</label>
@@ -226,7 +226,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import * as boardService from '../../services/interviewBoards';
 import * as userService from '../../services/users';
 import * as profileService from '../../services/jobProfiles';
-import { useAuthStore } from '../../stores/auth';
+import { useAuthStore } from '../../composables/useAuth';
 import { estToUTC, utcToEST, formatESTDateTime } from '../../utils/timezoneHelpers';
 
 const props = defineProps({
