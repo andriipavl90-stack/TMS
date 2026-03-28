@@ -9,6 +9,7 @@ export const fetchJobProfiles = async (filters = {}) => {
   if (filters.search) params.append('search', filters.search);
   if (filters.status) params.append('status', filters.status);
   if (filters.owner) params.append('owner', filters.owner);
+  if (filters.group) params.append('group', filters.group);
   if (filters.page) params.append('page', filters.page);
   if (filters.limit) params.append('limit', filters.limit);
   else params.append('limit', '1000');

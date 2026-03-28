@@ -30,9 +30,53 @@ const router = createRouter({
           component: () => import('../views/AdminUsers.vue'),
           meta: {
             title: 'User Management',
-            requiresRole: [ROLES.SUPER_ADMIN, ROLES.ADMIN, LEGACY_ROLES.BOSS] // BOSS for backward compatibility
+            requiresRole: ROLES.SUPER_ADMIN // BOSS for backward compatibility
           }
         },
+
+        {
+          path: 'dailyreports/dailyreport',
+          name: 'dailyreport',
+          component: () => import('../views/DailyReportView.vue'),
+          meta: {
+            title: 'Daily Report',
+            requiresRole: [ROLES.ADMIN, ROLES.MEMBER]
+          }
+        },
+
+        {
+          path: 'dailyreports/reportHistory',
+          name: 'reportHistory',
+          component: () => import('../views/ReportHistoryView.vue'),
+          meta: {
+            title: 'Report History',
+            requiresRole: [ROLES.ADMIN, ROLES.MEMBER]
+          }
+        },
+
+        {
+          path: 'dailyreports/groupReportHistory',
+          name: 'groupReportHistory',
+          component: () => import('../views/GroupReportHistory.vue'),
+          meta: {
+            title: 'Group Report History',
+            requiresRole: [LEGACY_ROLES.BOSS]
+          }
+        },
+
+        {
+          path: 'dailyreports/all',
+          name: 'all',
+          component: () => import('../views/AllGroupReportHistory.vue'),
+          meta: {
+            title: 'All of my Team',
+            requiresRole: [ROLES.SUPER_ADMIN] // BOSS for backward compatibility
+          }
+        },
+
+
+
+
         {
           path: 'profiles',
           name: 'Profiles',
@@ -120,7 +164,8 @@ const router = createRouter({
           path: 'finance/overview',
           name: 'FinanceOverview',
           component: () => import('../views/FinanceOverview.vue'),
-          meta: { title: 'Finance Overview' ,
+          meta: {
+            title: 'Finance Overview',
           }
         },
         {
@@ -141,14 +186,6 @@ const router = createRouter({
           component: () => import('../views/TransactionsView.vue'),
           meta: { title: 'Transactions' }
         },
-
-        // {
-        //   path: '/earnings/trend',
-        //   name: 'EarningsTrend',
-        //   component: () => import('../views/earnings/EarningsTrend.vue'),
-        //   meta: { title: 'Earnings Trend' }
-        // },
-        // Legacy routes (kept for backward compatibility, redirect to new routes)
         {
           path: 'kanban',
           redirect: '/project-job-management'

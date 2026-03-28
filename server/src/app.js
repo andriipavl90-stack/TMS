@@ -15,9 +15,10 @@ app.use(helmet());
 // CORS configuration
 // Allow requests from localhost or the configured CLIENT_URL
 // For network access, set CLIENT_URL=http://YOUR_IP:5173 in .env
-const allowedOrigins = [
-   "https://management-system-1-kns6.onrender.com",
-]
+const allowedOrigins = process.env.CLIENT_URL 
+  ? process.env.CLIENT_URL.split(',').map(url => url.trim())
+  : ['http://localhost:5173'];
+
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)

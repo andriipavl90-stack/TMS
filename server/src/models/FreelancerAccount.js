@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { ENTITY_GROUP_VALUES, DEFAULT_ENTITY_GROUP } from '../constants/groups.js';
 
 const freelancerAccountSchema = new mongoose.Schema({
   name: {
@@ -16,6 +17,13 @@ const freelancerAccountSchema = new mongoose.Schema({
     type: String,
     enum: ['active', 'archived'],
     default: 'active',
+    required: true,
+    index: true
+  },
+  group: {
+    type: String,
+    enum: ENTITY_GROUP_VALUES,
+    default: DEFAULT_ENTITY_GROUP,
     required: true,
     index: true
   },
@@ -89,6 +97,7 @@ const freelancerAccountSchema = new mongoose.Schema({
 freelancerAccountSchema.index({ ownerUserId: 1, status: 1 });
 freelancerAccountSchema.index({ status: 1, createdAt: -1 });
 freelancerAccountSchema.index({ country: 1, status: 1 });
+freelancerAccountSchema.index({ group: 1, status: 1 });
 freelancerAccountSchema.index({ email: 1 }); // For search/filtering
 freelancerAccountSchema.index({ name: 1, status: 1 }); // For search/filtering
 

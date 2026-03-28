@@ -2,12 +2,25 @@
   <form @submit.prevent="handleSubmit"> <!-- Basic Information Section -->
     <div class="form-section">
       <h3>Basic Information</h3>
-      <div class="form-group"> <label>Profile Name *</label> <input v-model="form.name" type="text" required
-          placeholder="e.g., John Doe - Frontend Developer" /> </div>
-      <div class="form-group"> <label>Status *</label> <select v-model="form.status" required>
+      <div class="form-group">
+        <label>Profile Name *</label>
+        <input v-model="form.name" type="text" required placeholder="e.g., John Doe - Frontend Developer" />
+      </div>
+      <div class="form-group">
+        <label>Status *</label>
+        <select v-model="form.status" required>
           <option value="active">Active</option>
           <option value="archived">Archived</option>
-        </select> </div>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Group *</label>
+        <select v-model="form.group" required>
+          <option v-for="opt in entityGroupOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
+      </div>
     </div> <!-- Contact Information Section -->
     <div class="form-section">
       <h3>Contact Information</h3>
@@ -75,85 +88,90 @@
   </form>
 </template>
 <script setup>
-  import { ref, watch, computed } from 'vue';
-  import { useAuthStore } from '../../../stores/auth';
-  import { normalizeRole, ROLES } from '../../../constants/roles.js';
-  import FileUploadSection from './FileUploadSection.vue';
-  
-  /* ---------------- props / emits ---------------- */
-  
-  const props = defineProps({
-    profile: {
-      type: Object,
-      default: null
-    },
-    saving: {
-      type: Boolean,
-      default: false
-    }
-  });
-  
-  const emit = defineEmits(['submit', 'cancel']);
-  
-  /* ---------------- stores ---------------- */
-  
-  const authStore = useAuthStore();
-  
-  /* ---------------- refs ---------------- */
-  
-  const tagsInput = ref('');
-  const pictureFile = ref(null);
-  const attachmentFiles = ref([]);
-  
-  /* ---------------- computed ---------------- */
-  
-  const canEditSensitiveFields = computed(() => {
-    if (!authStore.user) return false;
-    if (!props.profile) return true;
-  
-    const ownerId =
-      props.profile.ownerUserId?._id ||
-      props.profile.ownerUserId;
-  
-    const userRole = normalizeRole(authStore.user.role);
-  
-    return (
-      ownerId === authStore.user._id ||
-      userRole === ROLES.SUPER_ADMIN
-    );
-  });
-  
-  /* ---------------- form state ---------------- */
-  
-  const form = ref({
-    name: '',
-    status: 'active',
-    email: '',
-    phone: '',
-    country: '',
-    address: '',
-    socialLinks: {
-      linkedin: '',
-      github: '',
-      website: '',
-      other: []
-    },
-    bankAccount: '',
-    idNumber: '',
-    driverLicenseNumber: '',
-    experience: '',
-    education: '',
-    tags: [],
-    notes: ''
-  });
-  
-  /* ---------------- helpers (MUST be hoisted) ---------------- */
-  
-  function resetForm() {
+import { ref, watch, computed } from 'vue';
+import { useAuthStore } from '../../../stores/auth';
+import { normalizeRole, ROLES } from '../../../constants/roles.js';
+import { ENTITY_GROUP_OPTIONS, DEFAULT_ENTITY_GROUP } from '../../../constants/groups.js';
+import FileUploadSection from './FileUploadSection.vue';
+
+const entityGroupOptions = ENTITY_GROUP_OPTIONS;
+
+/* ---------------- props / emits ---------------- */
+
+const props = defineProps({
+  profile: {
+    type: Object,
+    default: null
+  },
+  saving: {
+    type: Boolean,
+    default: false
+  }
+});
+
+const emit = defineEmits(['submit', 'cancel']);
+
+/* ---------------- stores ---------------- */
+
+const authStore = useAuthStore();
+
+/* ---------------- refs ---------------- */
+
+const tagsInput = ref('');
+const pictureFile = ref(null);
+const attachmentFiles = ref([]);
+
+/* ---------------- computed ---------------- */
+
+const canEditSensitiveFields = computed(() => {
+  if (!authStore.user) return false;
+  if (!props.profile) return true;
+
+  const ownerId =
+    props.profile.ownerUserId?._id ||
+    props.profile.ownerUserId;
+
+  const userRole = normalizeRole(authStore.user.role);
+
+  return (
+    ownerId === authStore.user._id ||
+    userRole === ROLES.SUPER_ADMIN
+  );
+});
+
+/* ---------------- form state ---------------- */
+
+const form = ref({
+  name: '',
+  email: '',
+  status: 'active',
+  group: DEFAULT_ENTITY_GROUP,
+  phone: '',
+  country: '',
+  address: '',
+  socialLinks: {
+    linkedin: '',
+    github: '',
+    website: '',
+    other: []
+  },
+  bankAccount: '',
+  idNumber: '',
+  driverLicenseNumber: '',
+  experience: '',
+  education: '',
+  tags: [],
+  notes: ''
+});
+
+/* ---------------- helpers (MUST be hoisted) ---------------- */
+
+function resetForm() {
   form.value = {
     name: '',
-    status: 'active',
     email: '',
+    status: 'active',
+    group: DEFAULT_ENTITY_GROUP,
     phone: '',
     country: '',
     address: '',
@@ -179,8 +197,9 @@ watch(() => props.profile, (newProfile) => {
   if (newProfile) {
     form.value = {
       name: newProfile.name || '',
-      status: newProfile.status || 'active',
       email: newProfile.email || '',
+      status: newProfile.status || 'active',
+      group: newProfile.group || DEFAULT_ENTITY_GROUP,
       phone: newProfile.phone || '',
       country: newProfile.country || '',
       address: newProfile.address || '',
@@ -203,37 +222,37 @@ watch(() => props.profile, (newProfile) => {
     resetForm();
   }
 }, { immediate: true });
-  
-  /* ---------------- methods ---------------- */
-  
-  const updateTags = () => {
-    if (!tagsInput.value.trim()) return;
-  
-    const newTags = tagsInput.value
-      .split(',')
-      .map(t => t.trim())
-      .filter(Boolean);
-  
-    form.value.tags = [
-      ...new Set([...form.value.tags, ...newTags])
-    ];
-  
-    tagsInput.value = '';
-  };
-  
-  const removeTag = (tag) => {
-    form.value.tags = form.value.tags.filter(t => t !== tag);
-  };
-  
-  const handleSubmit = () => {
-    emit('submit', {
-      formData: form.value,
-      pictureFile: pictureFile.value,
-      attachmentFiles: attachmentFiles.value
-    });
-  };
-  </script>
-  
+
+/* ---------------- methods ---------------- */
+
+const updateTags = () => {
+  if (!tagsInput.value.trim()) return;
+
+  const newTags = tagsInput.value
+    .split(',')
+    .map(t => t.trim())
+    .filter(Boolean);
+
+  form.value.tags = [
+    ...new Set([...form.value.tags, ...newTags])
+  ];
+
+  tagsInput.value = '';
+};
+
+const removeTag = (tag) => {
+  form.value.tags = form.value.tags.filter(t => t !== tag);
+};
+
+const handleSubmit = () => {
+  emit('submit', {
+    formData: form.value,
+    pictureFile: pictureFile.value,
+    attachmentFiles: attachmentFiles.value
+  });
+};
+</script>
+
 <style scoped>
 .form-section {
   margin-bottom: var(--spacing-xl);
@@ -394,7 +413,7 @@ watch(() => props.profile, (newProfile) => {
   .form-row {
     grid-template-columns: 1fr;
   }
-  
+
   .form-section {
     margin-bottom: var(--spacing-lg);
     padding-bottom: var(--spacing-lg);

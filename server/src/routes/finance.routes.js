@@ -322,7 +322,7 @@ router.post(
               ),
             );
         }
-        // Validate target user exists
+        // Validate target user exists and is in same group (unless super admin)
         const targetUser = await User.findById(validatedData.userId);
         if (!targetUser) {
           return res
@@ -334,6 +334,20 @@ router.post(
                 404,
               ),
             );
+        }
+        const reqGroup = req.user?.group;
+        if (req.user.role !== ROLES.SUPER_ADMIN && reqGroup && !['SUPER_ADMIN', 'ADMIN'].includes(reqGroup)) {
+          if (targetUser.group !== reqGroup) {
+            return res
+              .status(403)
+              .json(
+                createErrorResponse(
+                  "ACCESS_DENIED",
+                  "You can only create transactions for users in your own group",
+                  403,
+                ),
+              );
+          }
         }
         targetUserId = validatedData.userId;
       }
@@ -479,8 +493,22 @@ router.put(
           .json(createErrorResponse("NOT_FOUND", "Transaction not found", 404));
       }
 
-      // Boss/superadmin can edit any transaction
-      // No need to check ownership - boss has full access
+      // Only own group can edit: get transaction owner's group
+      const txOwner = await User.findById(transaction.userId).select("group").lean();
+      const reqGroup = req.user?.group;
+      if (req.user.role !== ROLES.SUPER_ADMIN && reqGroup && !["SUPER_ADMIN", "ADMIN"].includes(reqGroup)) {
+        if (txOwner?.group !== reqGroup) {
+          return res
+            .status(403)
+            .json(
+              createErrorResponse(
+                "ACCESS_DENIED",
+                "You can only edit transactions for your own group",
+                403,
+              ),
+            );
+        }
+      }
 
       const validatedData = updateTransactionSchema.parse(req.body);
 
@@ -654,6 +682,23 @@ router.delete(
               403,
             ),
           );
+      }
+
+      // Only own group can delete: boss/admin can only delete for their group
+      const txOwner = await User.findById(transaction.userId).select("group").lean();
+      const reqGroup = req.user?.group;
+      if (req.user.role !== ROLES.SUPER_ADMIN && reqGroup && !["SUPER_ADMIN", "ADMIN"].includes(reqGroup)) {
+        if (txOwner?.group !== reqGroup) {
+          return res
+            .status(403)
+            .json(
+              createErrorResponse(
+                "ACCESS_DENIED",
+                "You can only delete transactions for your own group",
+                403,
+              ),
+            );
+        }
       }
 
       // Cannot delete approved transactions (unless boss/admin)
@@ -1531,12 +1576,26 @@ router.post(
     try {
       const validatedData = monthlyPlanSchema.parse(req.body);
 
-      // Validate userId exists
+      // Validate userId exists and is in same group
       const user = await User.findById(validatedData.userId);
       if (!user) {
         return res
           .status(404)
           .json(createErrorResponse("USER_NOT_FOUND", "User not found", 404));
+      }
+      const reqGroup = req.user?.group;
+      if (req.user.role !== ROLES.SUPER_ADMIN && reqGroup && !["SUPER_ADMIN", "ADMIN"].includes(reqGroup)) {
+        if (user.group !== reqGroup) {
+          return res
+            .status(403)
+            .json(
+              createErrorResponse(
+                "ACCESS_DENIED",
+                "You can only create plans for users in your own group",
+                403,
+              ),
+            );
+        }
       }
 
       // Check if plan already exists for this user and month
@@ -1638,6 +1697,22 @@ router.put(
               404,
             ),
           );
+      }
+
+      const planUser = await User.findById(plan.userId).select("group").lean();
+      const reqGroup = req.user?.group;
+      if (req.user.role !== ROLES.SUPER_ADMIN && reqGroup && !["SUPER_ADMIN", "ADMIN"].includes(reqGroup)) {
+        if (planUser?.group !== reqGroup) {
+          return res
+            .status(403)
+            .json(
+              createErrorResponse(
+                "ACCESS_DENIED",
+                "You can only edit plans for your own group",
+                403,
+              ),
+            );
+        }
       }
 
       const validatedData = updateMonthlyPlanSchema.parse(req.body);
@@ -2345,6 +2420,19 @@ router.post(
         );
       }
 
+      const reqGroup = req.user?.group;
+      if (req.user.role !== ROLES.SUPER_ADMIN && reqGroup && !['SUPER_ADMIN', 'ADMIN'].includes(reqGroup)) {
+        if (user.group !== reqGroup) {
+          return res.status(403).json(
+            createErrorResponse(
+              'ACCESS_DENIED',
+              'You can only create plans for users in your own group',
+              403
+            )
+          );
+        }
+      }
+
       const exists = await PeriodicFinancialPlan.findOne({
         userId: data.userId,
         periodId: data.periodId,
@@ -2409,6 +2497,20 @@ router.put(
             404
           )
         );
+      }
+
+      const planUser = await User.findById(periodicPlan.userId).select('group').lean();
+      const reqGroup = req.user?.group;
+      if (req.user.role !== ROLES.SUPER_ADMIN && reqGroup && !['SUPER_ADMIN', 'ADMIN'].includes(reqGroup)) {
+        if (planUser?.group !== reqGroup) {
+          return res.status(403).json(
+            createErrorResponse(
+              'ACCESS_DENIED',
+              'You can only edit plans for your own group',
+              403
+            )
+          );
+        }
       }
 
       // ✅ Change periodId (safe reassignment)

@@ -21,6 +21,8 @@ import projectRoutes from './project.routes.js';
 import taskRoutes from './task.routes.js';
 import uploadRoutes from './upload.routes.js';
 
+import dailyRoutes from './daily.router.js'
+
 const router = express.Router();
 
 // Rate limiting for auth endpoints
@@ -39,6 +41,10 @@ const authLimiter = rateLimit({
 });
 
 // API Routes
+
+router.use('/daily', dailyRoutes);
+
+
 router.use('/auth', authLimiter, authRoutes);
 router.use('/', userRoutes); // /me routes
 router.use('/admin', adminRoutes); // Admin routes

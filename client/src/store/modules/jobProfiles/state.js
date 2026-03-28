@@ -6,6 +6,7 @@ export default {
   filters: {
     search: '',
     status: '',
-    owner: ''
+    owner: '',
+    group: ''
   }
 };

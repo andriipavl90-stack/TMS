@@ -8,7 +8,6 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || null);
   const userStr = localStorage.getItem('user');
   const user = ref(userStr ? JSON.parse(userStr) : null);
-
   const isAuthenticated = computed(() => !!token.value && !!user.value);
 
   const login = async (email, password) => {
@@ -16,7 +15,7 @@ export const useAuthStore = defineStore('auth', () => {
       console.log('[AUTH] Attempting login for:', email);
       const response = await apiClient.post('/auth/login', { email, password });
       console.log('[AUTH] Login response:', response.data);
-      
+
       // Server returns: { ok: true, message: '...', data: { token, user } }
       console.log('[AUTH] response.data.data:', response.data.data);
       console.log('[AUTH] response.data.ok:', response.data.ok);
@@ -25,7 +24,7 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = response.data.data.user;
         localStorage.setItem('token', response.data.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.data.user));
-        console.log('[AUTH] Login successful');
+        console.log(user);
         return response.data;
       } else {
         console.error('[AUTH] Login failed - invalid response:', response.data);
@@ -68,7 +67,7 @@ export const useAuthStore = defineStore('auth', () => {
     // Restore auth state from localStorage
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
-    
+
     if (storedToken && storedUser) {
       try {
         token.value = storedToken;

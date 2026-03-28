@@ -5,6 +5,38 @@ import apiClient from './axios';
  */
 
 /**
+ * Fetch all groups (for dropdowns, filters)
+ */
+export const fetchGroups = async () => {
+  const response = await apiClient.get('/admin/groups');
+  return response.data;
+};
+
+/**
+ * Create a new group (super admin only)
+ */
+export const createGroup = async (groupData) => {
+  const response = await apiClient.post('/admin/groups', groupData);
+  return response.data;
+};
+
+/**
+ * Update a group (super admin only)
+ */
+export const updateGroup = async (groupId, groupData) => {
+  const response = await apiClient.put(`/admin/groups/${groupId}`, groupData);
+  return response.data;
+};
+
+/**
+ * Delete a group (super admin only)
+ */
+export const deleteGroup = async (groupId) => {
+  const response = await apiClient.delete(`/admin/groups/${groupId}`);
+  return response.data;
+};
+
+/**
  * Fetch all users with filters
  */
 export const fetchUsers = async (params = {}) => {

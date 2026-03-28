@@ -6,9 +6,14 @@
           <h1>User Management</h1>
           <p class="subtitle">Manage team members and permissions</p>
         </div>
-        <button @click="openCreateModal" class="btn-primary">
-          + Add User
-        </button>
+        <div class="header-actions">
+          <button v-if="isSuperAdmin" @click="openGroupModal()" class="btn-secondary">
+            Manage Groups
+          </button>
+          <button @click="openCreateModal" class="btn-primary">
+            + Add User
+          </button>
+        </div>
       </div>
     </div>
 
@@ -29,8 +34,10 @@
       <table class="users-table">
         <thead>
           <tr>
-            <th>Name</th>
+            <th>User</th>
             <th>Email</th>
+            <th>Group</th>
+            <th>Degree</th>
             <th>Role</th>
             <th>Status</th>
             <th>Editor</th>
@@ -42,10 +49,21 @@
           <tr v-for="user in users" :key="user.id">
             <td>{{ user.name }}</td>
             <td>{{ user.email }}</td>
+            <td>{{ getGroupLabel(user.group) }}</td>
             <td>
-              <span class="role-badge" :class="`role-${user.role.toLowerCase()}`">
-                {{ formatRole(user.role) }}
-              </span>
+              {{
+                user.degree
+                  ? user.degree
+                    .replace(/_/g, ' ')
+                    .toLowerCase()
+                    .replace(/\b\w/g, c => c.toUpperCase())
+              : 'N/A'
+              }}
+            </td>
+            <td>
+            <span class="role-badge" :class="`role-${user.role.toLowerCase()}`">
+              {{ formatRole(user.role) }}
+            </span>
             </td>
             <td>
               <span class="status-badge" :class="`status-${user.status}`">
@@ -84,22 +102,32 @@
           <form @submit.prevent="handleSubmit">
             <div class="form-group">
               <label>Email *</label>
-              <input
-                v-model="form.email"
-                type="email"
-                required
-                :disabled="editingUser !== null"
-                placeholder="user@example.com"
-              />
+              <input v-model="form.email" type="email" required :disabled="editingUser !== null"
+                placeholder="user@example.com" />
             </div>
             <div class="form-group">
               <label>Name *</label>
-              <input
-                v-model="form.name"
-                type="text"
-                required
-                placeholder="Full Name"
-              />
+              <input v-model="form.name" type="text" required placeholder="Full Name" />
+            </div>
+            <!-- add group and member degree -->
+            <div class="form-row">
+              <div class="form-group">
+                <label>Group *</label>
+                <select v-model="form.group" required>
+                  <option v-for="opt in userGroupOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Degree *</label>
+                <select v-model="form.degree" required>
+                  <option value="SUPER_ADMIN">Super Admin</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="TEAM_BOSS">Team Boss</option>
+                  <option value="MEMBER">Member</option>
+                </select>
+              </div>
             </div>
             <div class="form-row">
               <div class="form-group">
@@ -143,6 +171,61 @@
         </div>
       </div>
     </div>
+
+    <!-- Group Management Modal (Super Admin only) -->
+    <div v-if="showGroupModal" class="modal-overlay" @click="closeGroupModal">
+      <div class="modal modal-wide" @click.stop>
+        <div class="modal-header">
+          <h2>Manage Groups</h2>
+          <button @click="closeGroupModal" class="close-btn">✕</button>
+        </div>
+        <div class="modal-content">
+          <form @submit.prevent="saveGroup" class="group-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Name *</label>
+                <input v-model="groupForm.name" type="text" required placeholder="e.g. Group 1" />
+              </div>
+              <div class="form-group">
+                <label>Code *</label>
+                <input v-model="groupForm.code" type="text" required placeholder="e.g. GROUP_1" :disabled="!!editingGroup" />
+                <small v-if="editingGroup" class="form-hint">Code cannot be changed</small>
+              </div>
+              <div class="form-group form-group-sm">
+                <label>Sort</label>
+                <input v-model.number="groupForm.sortOrder" type="number" min="0" />
+              </div>
+              <div class="form-group form-group-actions">
+                <button type="submit" class="btn-save">{{ editingGroup ? 'Update' : 'Add' }}</button>
+                <button v-if="editingGroup" type="button" @click="openGroupModal()" class="btn-cancel">Cancel Edit</button>
+              </div>
+            </div>
+          </form>
+          <div class="groups-list">
+            <h4>Existing Groups</h4>
+            <table class="groups-table">
+              <thead>
+                <tr><th>Name</th><th>Code</th><th>Sort</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="g in groups" :key="g._id">
+                  <td>{{ g.name }}</td>
+                  <td><code>{{ g.code }}</code></td>
+                  <td>{{ g.sortOrder }}</td>
+                  <td>
+                    <button @click="openGroupModal(g)" class="btn-edit btn-sm">Edit</button>
+                    <button @click="deleteGroup(g)" class="btn-reset btn-sm">Delete</button>
+                  </td>
+                </tr>
+                <tr v-if="groups.length === 0">
+                  <td colspan="4" class="empty-state">No groups yet. Add one above.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -150,8 +233,23 @@
 import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import * as adminService from '../services/admin';
+import { formatGroupLabel } from '../constants/groups.js';
+import { ROLES } from '../constants/roles.js';
 
 const authStore = useAuthStore();
+const groups = ref([]);
+const userGroupOptions = computed(() => {
+  const special = [
+    { value: 'SUPER_ADMIN', label: 'Super Admin' },
+    { value: 'ADMIN', label: 'Admin' }
+  ];
+  const fromDb = groups.value.map(g => ({ value: g.code, label: g.name }));
+  return [...special, ...fromDb];
+});
+const defaultUserGroup = computed(() => {
+  const first = groups.value[0];
+  return first ? first.code : 'GROUP_1';
+});
 
 const loading = ref(false);
 const error = ref(null);
@@ -161,17 +259,33 @@ const editingUser = ref(null);
 const saving = ref(false);
 const tempPassword = ref('');
 
-import { ROLES } from '../constants/roles.js';
-
 const isSuperAdmin = computed(() => authStore.user?.role === ROLES.SUPER_ADMIN);
+
+// Group management (super admin only)
+const showGroupModal = ref(false);
+const editingGroup = ref(null);
+const groupForm = ref({ name: '', code: '', sortOrder: 0 });
 
 const form = ref({
   email: '',
   name: '',
+  group: '',
+  member: 'MEMBER',
   role: 'MEMBER',
   status: 'active',
   editor: false
 });
+
+const loadGroups = async () => {
+  try {
+    const res = await adminService.fetchGroups();
+    if (res?.data?.groups) {
+      groups.value = res.data.groups;
+    }
+  } catch (err) {
+    console.error('Failed to load groups:', err);
+  }
+};
 
 const loadUsers = async () => {
   loading.value = true;
@@ -194,6 +308,8 @@ const openCreateModal = () => {
   form.value = {
     email: '',
     name: '',
+    group: defaultUserGroup.value || 'GROUP_1',
+    degree: 'MEMBER',
     role: 'MEMBER',
     status: 'active',
     editor: false
@@ -207,6 +323,8 @@ const openEditModal = (user) => {
   form.value = {
     email: user.email,
     name: user.name,
+    group: user.group,
+    degree: user.degree,
     role: user.role,
     status: user.status,
     editor: user.editor || false
@@ -228,6 +346,8 @@ const handleSubmit = async () => {
     if (editingUser.value) {
       // Update user
       const response = await adminService.updateUser(editingUser.value.id, {
+        group: form.value?.group,
+        degree: form.value?.degree,
         role: form.value.role,
         status: form.value.status,
         editor: form.value.editor
@@ -282,8 +402,56 @@ const formatDate = (date) => {
 };
 
 onMounted(() => {
+  loadGroups();
   loadUsers();
 });
+
+// Group CRUD
+const openGroupModal = (group = null) => {
+  editingGroup.value = group;
+  groupForm.value = group
+    ? { name: group.name, code: group.code, sortOrder: group.sortOrder ?? 0 }
+    : { name: '', code: '', sortOrder: groups.value.length };
+  showGroupModal.value = true;
+};
+
+const closeGroupModal = () => {
+  showGroupModal.value = false;
+  editingGroup.value = null;
+};
+
+const saveGroup = async () => {
+  try {
+    if (editingGroup.value) {
+      await adminService.updateGroup(editingGroup.value._id, groupForm.value);
+    } else {
+      await adminService.createGroup(groupForm.value);
+    }
+    await loadGroups();
+    closeGroupModal();
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Failed to save group';
+  }
+};
+
+const getGroupLabel = (code) => {
+  if (!code) return '—';
+  const g = groups.value.find(x => x.code === code);
+  if (g) return g.name;
+  if (code === 'SUPER_ADMIN') return 'Super Admin';
+  if (code === 'ADMIN') return 'Admin';
+  return formatGroupLabel(code);
+};
+
+const deleteGroup = async (group) => {
+  if (!confirm(`Delete group "${group.name}"? Users must be reassigned first.`)) return;
+  try {
+    await adminService.deleteGroup(group._id);
+    await loadGroups();
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Failed to delete group';
+  }
+};
 </script>
 
 <style scoped>
@@ -310,6 +478,86 @@ onMounted(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: var(--spacing-md);
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+}
+
+.btn-secondary {
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1.5px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  transition: all var(--transition-base);
+}
+
+.btn-secondary:hover {
+  background: var(--border-medium);
+  border-color: var(--color-primary);
+}
+
+.modal-wide {
+  max-width: 640px;
+}
+
+.group-form {
+  margin-bottom: var(--spacing-xl);
+}
+
+.groups-list h4 {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+}
+
+.groups-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.groups-table th,
+.groups-table td {
+  padding: var(--spacing-sm) var(--spacing-md);
+  text-align: left;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.groups-table code {
+  font-size: 0.85em;
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.btn-sm {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  margin-right: var(--spacing-xs);
+}
+
+.form-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.form-group-sm {
+  max-width: 80px;
+}
+
+.form-group-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--spacing-sm);
 }
 
 .page-header h1 {
@@ -368,8 +616,13 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .users-table-container {
@@ -726,28 +979,28 @@ onMounted(() => {
   .page-header {
     padding: var(--spacing-lg);
   }
-  
+
   .page-header h1 {
     font-size: var(--font-size-2xl);
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
   }
-  
+
   .users-table {
     font-size: var(--font-size-xs);
   }
-  
+
   .users-table th,
   .users-table td {
     padding: var(--spacing-md);
   }
-  
+
   .action-buttons {
     flex-direction: column;
   }
-  
+
   .btn-edit,
   .btn-reset {
     width: 100%;

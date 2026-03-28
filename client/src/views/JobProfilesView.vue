@@ -26,6 +26,10 @@
         <option value="active">Active</option>
         <option value="archived">Archived</option>
       </select>
+      <select v-if="groups.length" v-model="groupFilter" @change="handleFilterChange" class="filter-select">
+        <option value="">All Groups</option>
+        <option v-for="g in groups" :key="g._id" :value="g.code">{{ g.name }}</option>
+      </select>
     </div>
 
     <!-- Loading State -->
@@ -69,6 +73,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useAuthStore } from '../composables/useAuth';
 import { normalizeRole, ROLES } from '../constants/roles.js';
+import { fetchGroups } from '../services/admin.js';
 import ProfileTable from '../components/Profiles/ProfileTable.vue';
 import ProfileModal from '../components/Profiles/ProfileModal/ProfileModal.vue';
 import ProfileDrawer from '../components/Profiles/ProfileDrawer/ProfileDrawer.vue';
@@ -81,6 +86,8 @@ const editingProfile = ref(null);
 const saving = ref(false);
 const searchQuery = ref('');
 const statusFilter = ref('');
+const groupFilter = ref('');
+const groups = ref([]);
 
 let searchTimeout = null;
 
@@ -97,14 +104,21 @@ const canCreate = computed(() => {
 });
 
 const loadProfiles = async () => {
-  // Update filters in store
   store.dispatch('jobProfiles/setFilters', {
     search: searchQuery.value,
-    status: statusFilter.value
+    status: statusFilter.value,
+    group: groupFilter.value
   });
-  
-  // Fetch profiles
   await store.dispatch('jobProfiles/fetchProfiles');
+};
+
+const loadGroups = async () => {
+  try {
+    const res = await fetchGroups();
+    groups.value = res?.data?.groups || res?.groups || [];
+  } catch {
+    groups.value = [];
+  }
 };
 
 const handleSearch = () => {
@@ -215,6 +229,7 @@ const handleSubmit = async ({ formData, pictureFile, attachmentFiles }) => {
 };
 
 onMounted(async () => {
+  await loadGroups();
   await loadProfiles();
 });
 </script>

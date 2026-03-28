@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { DEFAULT_ENTITY_GROUP } from '../constants/groups.js';
 
 const jobProfileSchema = new mongoose.Schema({
   name: {
@@ -16,6 +17,12 @@ const jobProfileSchema = new mongoose.Schema({
     type: String,
     enum: ['active', 'archived'],
     default: 'active',
+    required: true,
+    index: true
+  },
+  group: {
+    type: String,
+    default: DEFAULT_ENTITY_GROUP,
     required: true,
     index: true
   },
@@ -93,6 +100,7 @@ const jobProfileSchema = new mongoose.Schema({
 jobProfileSchema.index({ ownerUserId: 1, status: 1 });
 jobProfileSchema.index({ status: 1, createdAt: -1 });
 jobProfileSchema.index({ country: 1, status: 1 });
+jobProfileSchema.index({ group: 1, status: 1 });
 jobProfileSchema.index({ email: 1 }); // For search/filtering
 jobProfileSchema.index({ name: 1, status: 1 }); // For search/filtering
 

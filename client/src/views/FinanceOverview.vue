@@ -12,6 +12,7 @@ import { formatMonth } from '../utils/financeHelpers'
 import * as financeService from '../services/finance'
 import { useAuthStore } from '../stores/auth'
 import { fetchUsers } from '../services/users'
+import { fetchGroups } from '../services/admin'
 
 /* ===============================
    STATE
@@ -20,12 +21,15 @@ const now = new Date()
 const currentMonth = now.toISOString().slice(0, 7)
 const selectedMonth = ref(currentMonth) // YYYY-MM
 const selectedMemberId = ref('all')  // 'all' or userId
+const selectedGroupId = ref('all')   // 'all' or group code (GROUP_1, etc.)
 const selectedWeek = ref('all')
 const loading = ref(false)
 const error = ref(null)
 const metrics = ref(null)
 const rankingMetrics = ref(null) // Separate metrics for ranking sections (always all members)
 const users = ref([])
+const groups = ref([])
+const byGroupSummary = ref([])
 
 const authStore = useAuthStore()
 const monthlyPlans = ref([])
@@ -86,16 +90,18 @@ const loadFinanceOverview = async () => {
   try {
     const { start, end } = getMonthRange(selectedMonth.value)
 
-    // First section (overview) uses selectedMemberId to filter
+    // First section (overview) uses selectedMemberId and selectedGroupId to filter
     const res = await apiClient.get('finance/finance-overview', {
       params: {
         start,
         end,
-        memberId: selectedMemberId.value // Use selected member for overview section
+        memberId: selectedMemberId.value,
+        groupId: selectedGroupId.value !== 'all' ? selectedGroupId.value : undefined
       }
     })
 
     metrics.value = res.data.data.metrics
+    byGroupSummary.value = res.data.data.byGroupSummary || []
     console.log('Finance Overview API Response:', res.data.data)
     console.log('Week Metrics from API:', res.data.data.metrics?.week)
     console.log('Week Metrics length:', res.data.data.metrics?.week?.length)
@@ -175,12 +181,13 @@ const loadRankingData = async () => {
   try {
     const { start, end } = getMonthRange(selectedMonth.value)
 
-    // Ranking sections always show all members' data
+    // Ranking sections use same group filter
     const res = await apiClient.get('finance/finance-overview', {
       params: {
         start,
         end,
-        memberId: 'all' // Always fetch all members for ranking sections
+        memberId: 'all',
+        groupId: selectedGroupId.value !== 'all' ? selectedGroupId.value : undefined
       }
     })
 
@@ -193,10 +200,9 @@ const loadRankingData = async () => {
 const loadUsers = async () => {
   try {
     const res = await fetchUsers();
-    users.value = res.data.users || [];
+    users.value = res?.data?.users || res?.users || [];
   } catch (err) {
     if (err.response?.status === 403) {
-      // Not admin → allowed fallback
       users.value = [];
       console.warn('User does not have permission to view users');
     } else {
@@ -204,22 +210,33 @@ const loadUsers = async () => {
     }
   }
 };
+
+const loadGroups = async () => {
+  try {
+    const res = await fetchGroups();
+    groups.value = res?.data?.groups || res?.groups || [];
+  } catch (err) {
+    groups.value = [];
+    console.warn('Failed to load groups', err);
+  }
+};
 /* ===============================
    WATCHERS
 ================================ */
-onMounted(() => {
+onMounted(async () => {
+  await loadGroups()
   loadUsers()
   loadFinanceOverview()
   loadRankingData()
 })
 
-// Watch selectedMonth and selectedMemberId for overview section (first section)
-watch([selectedMonth, selectedMemberId], () => {
+// Watch filters for overview section
+watch([selectedMonth, selectedMemberId, selectedGroupId], () => {
   loadFinanceOverview()
 }, { immediate: false })
 
-// Watch only selectedMonth for ranking sections (monthly and yearly rankings)
-watch([selectedMonth], () => {
+// Watch for ranking sections
+watch([selectedMonth, selectedGroupId], () => {
   loadRankingData()
 }, { immediate: false })
 
@@ -390,6 +407,16 @@ const getPerformanceBreakdownData = (metricsData) => {
     { label: 'Actual Expense', value: total.actualExpense }
   ].filter(item => item.value >=0)
 }
+
+// Groups available for filter: super admin sees all + can switch; others see all for summary but detail only own
+const availableGroupsForFilter = computed(() => groups.value)
+
+// Users filtered by selected group (for member dropdown)
+const filteredUsers = computed(() => {
+  const list = users.value || []
+  if (selectedGroupId.value === 'all') return list
+  return list.filter(u => u.group === selectedGroupId.value)
+})
 
 // Ranking metrics (always all members)
 const rankingYearMetrics = computed(() => rankingMetrics.value?.year ?? null)
@@ -674,16 +701,22 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
             <span class="filter-label">Month:</span>
             <input type="month" v-model="selectedMonth" class="filter-input" />
           </label>
+          <label v-if="availableGroupsForFilter.length > 0" class="filter-item">
+            <span class="filter-label">Group:</span>
+            <select v-model="selectedGroupId" class="filter-select">
+              <option value="all">All Groups</option>
+              <option v-for="g in availableGroupsForFilter" :key="g._id" :value="g.code">
+                {{ g.name }}
+              </option>
+            </select>
+          </label>
           <label class="filter-item">
             <span class="filter-label">Member:</span>
             <select v-model="selectedMemberId" class="filter-select">
-
-              <!-- <option value="all">All Members</option>/// -->
               <option value="all">All Users</option>
-              <option v-for="u in users" :key="u.id" :value="u.id">
+              <option v-for="u in filteredUsers" :key="u.id || u._id" :value="u.id || u._id">
                 {{ u.name || u.email }}
               </option>
-              <!-- Add user options here if needed -->
             </select>
           </label>
         </div>
@@ -706,6 +739,45 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
 
     <!-- CONTENT -->
     <div v-if="!loading && !error && metrics" class="content">
+      <!-- All Groups Summary (top, super admin only when viewing all) -->
+      <section v-if="byGroupSummary && byGroupSummary.length > 0" class="dashboard-section groups-summary-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span class="title-icon">📋</span>
+            All Groups Summary - {{ formatMonth(selectedMonth) }}
+          </h2>
+        </div>
+        <div class="groups-summary-grid">
+          <div
+            v-for="g in byGroupSummary"
+            :key="g.group"
+            class="group-summary-card"
+          >
+            <h4 class="group-summary-name">{{ g.groupName || g.group }}</h4>
+            <div class="group-summary-metrics">
+              <div class="group-metric">
+                <span class="group-metric-label">Income</span>
+                <span class="group-metric-value income-value">{{ formatAmount(g.actualIncome) }}</span>
+              </div>
+              <div class="group-metric">
+                <span class="group-metric-label">Outcome</span>
+                <span class="group-metric-value expense-value">{{ formatAmount(g.actualExpense) }}</span>
+              </div>
+              <div class="group-metric">
+                <span class="group-metric-label">Profit</span>
+                <span class="group-metric-value" :class="(g.profit || 0) >= 0 ? 'income-value' : 'expense-value'">
+                  {{ formatAmount(g.profit) }}
+                </span>
+              </div>
+              <div class="group-metric">
+                <span class="group-metric-label">Members</span>
+                <span class="group-metric-value">{{ g.userCount || 0 }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Finance Overview Section -->
       <section class="dashboard-section">
         <div class="section-header">
@@ -1455,6 +1527,54 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
 
 .dashboard-section:hover {
   box-shadow: var(--shadow-lg);
+}
+
+.groups-summary-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.groups-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.group-summary-card {
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  border: 1px solid var(--border-light);
+}
+
+.group-summary-name {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-light);
+  padding-bottom: var(--spacing-sm);
+}
+
+.group-summary-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.group-metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-size-sm);
+}
+
+.group-metric-label {
+  color: var(--text-secondary);
+}
+
+.group-metric-value {
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
 }
 
 .section-header {

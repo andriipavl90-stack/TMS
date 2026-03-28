@@ -1,6 +1,7 @@
 import JobProfile from '../models/JobProfile.js';
 import FileMeta from '../models/FileMeta.js';
 import { createErrorResponse, createSuccessResponse } from '../utils/errors.js';
+import { DEFAULT_ENTITY_GROUP } from '../constants/groups.js';
 import { log as auditLog, getRequestMeta } from '../utils/audit.js';
 import { normalizeRole, ROLES } from '../utils/roleMapper.js';
 import { jobProfilePermissions } from '../utils/permissions/entityPermissions.js';
@@ -24,6 +25,7 @@ const validateJobProfile = (data, isUpdate = false) => {
   if (data.status && !['active', 'archived'].includes(data.status)) {
     errors.push('Status must be active or archived');
   }
+  // Group: allow NONE or group codes from DB (validation relaxed for dynamic groups)
   if (data.email && data.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
     errors.push('Invalid email format');
   }
@@ -57,6 +59,11 @@ export const listJobProfiles = async (req, res, next) => {
     // Ownership-first: Members can only see their own profiles
     if (userRole === ROLES.MEMBER) {
       query.ownerUserId = user._id;
+    }
+
+    // All groups can see all profiles (summary/view). Filter by group in query if provided.
+    if (req.query.group) {
+      query.group = req.query.group;
     }
 
     // Apply filters
@@ -196,10 +203,24 @@ export const createJobProfile = async (req, res, next) => {
       ownerUserId = req.user._id;
     }
 
+    const requestedGroup = req.body.group || DEFAULT_ENTITY_GROUP;
+    const userGroup = req.user?.group;
+    const isSuperAdmin = userRole === ROLES.SUPER_ADMIN;
+    if (!isSuperAdmin && userGroup && !['SUPER_ADMIN', 'ADMIN'].includes(userGroup)) {
+      if (requestedGroup !== userGroup) {
+        return res.status(403).json(createErrorResponse(
+          'ACCESS_DENIED',
+          'You can only create profiles for your own group',
+          403
+        ));
+      }
+    }
+
     const profileData = {
       name: req.body.name,
       ownerUserId: ownerUserId,
       status: req.body.status || 'active',
+      group: requestedGroup,
       email: req.body.email || '',
       phone: req.body.phone || '',
       country: req.body.country || '',
@@ -226,7 +247,7 @@ export const createJobProfile = async (req, res, next) => {
 
     await auditLog(req, 'JOB_PROFILE_CREATE', 'JOB_PROFILE', profile._id.toString(), {
       ...getRequestMeta(req),
-      profile: { name: profile.name, status: profile.status }
+      profile: { name: profile.name, status: profile.status, group: profile.group }
     });
 
     const sanitized = sanitizeJobProfile(req.user, profile.toObject ? profile.toObject() : profile);
@@ -270,6 +291,16 @@ export const updateJobProfile = async (req, res, next) => {
     }
 
     const userRole = normalizeRole(req.user.role);
+    const userGroup = req.user?.group;
+    if (userRole !== ROLES.SUPER_ADMIN && userGroup && !['SUPER_ADMIN', 'ADMIN'].includes(userGroup)) {
+      if (profile.group !== userGroup) {
+        return res.status(403).json(createErrorResponse(
+          'ACCESS_DENIED',
+          'You can only edit your own group\'s profiles',
+          403
+        ));
+      }
+    }
     if (userRole === ROLES.MEMBER && profile.ownerUserId.toString() !== req.user._id.toString()) {
       return res.status(403).json(createErrorResponse(
         'ACCESS_DENIED',
@@ -304,6 +335,7 @@ export const updateJobProfile = async (req, res, next) => {
     // Update only provided fields
     if (req.body.name !== undefined) profile.name = req.body.name;
     if (req.body.status !== undefined) profile.status = req.body.status;
+    if (req.body.group !== undefined) profile.group = req.body.group;
     if (req.body.email !== undefined) profile.email = req.body.email || '';
     if (req.body.phone !== undefined) profile.phone = req.body.phone || '';
     if (req.body.country !== undefined) profile.country = req.body.country || '';
@@ -365,6 +397,16 @@ export const deleteJobProfile = async (req, res, next) => {
     }
 
     const userRole = normalizeRole(req.user.role);
+    const userGroup = req.user?.group;
+    if (userRole !== ROLES.SUPER_ADMIN && userGroup && !['SUPER_ADMIN', 'ADMIN'].includes(userGroup)) {
+      if (profile.group !== userGroup) {
+        return res.status(403).json(createErrorResponse(
+          'ACCESS_DENIED',
+          'You can only delete your own group\'s profiles',
+          403
+        ));
+      }
+    }
     if (userRole === ROLES.MEMBER && profile.ownerUserId.toString() !== req.user._id.toString()) {
       return res.status(403).json(createErrorResponse(
         'ACCESS_DENIED',

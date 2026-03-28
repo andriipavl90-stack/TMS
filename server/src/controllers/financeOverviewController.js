@@ -282,6 +282,7 @@ import MonthlyFinancialPlan from '../models/MonthlyFinancialPlan.js';
 import PeriodicFinancialPlan from '../models/PeriodicFinancialPlan.js';
 import FinancePeriod from '../models/FinancePeriod.js';
 import User from '../models/User.js';
+import Group from '../models/Group.js';
 import mongoose from 'mongoose';
 import { createErrorResponse, createSuccessResponse } from '../utils/errors.js';
 import { validateDateRange } from '../utils/financeHelpers.js';
@@ -346,8 +347,9 @@ const buildFullByUserArray = (users, byUserObj) =>
 
 export const getFinanceMetrics = async (req, res, next) => {
   try {
-    const { memberId, start, end } = req.query;
+    const { memberId, start, end, groupId } = req.query;
     const isAllMembers = memberId === 'all';
+    const reqUser = req.user;
 
     if (!start || !end) {
       throw createErrorResponse(
@@ -381,12 +383,34 @@ export const getFinanceMetrics = async (req, res, next) => {
 
     /* ======================================================
        LOAD USERS (SOURCE OF TRUTH)
+       - Exclude SUPER_ADMIN from finance
+       - Only include users with a valid group (GROUP_1, etc. - not SUPER_ADMIN/ADMIN)
+       - Filter by groupId if provided
+       - Non-super-admin: restrict to their group only
     ====================================================== */
 
-    const users = await User.find(
-      isAllMembers ? {} : { _id: userObjectId }
-    )
-      .select('_id name email')
+    const userQuery = { role: { $ne: 'SUPER_ADMIN' } };
+    if (!isAllMembers) {
+      userQuery._id = userObjectId;
+    }
+
+    // Only users with a real group (exclude SUPER_ADMIN, ADMIN, null, empty)
+    userQuery.group = { $nin: ['SUPER_ADMIN', 'ADMIN', null, ''] };
+
+    // Non-super-admin: can only see their own group
+    const isSuperAdmin = reqUser?.role === 'SUPER_ADMIN';
+    const userGroup = reqUser?.group;
+    const hasRealGroup = userGroup && !['SUPER_ADMIN', 'ADMIN'].includes(userGroup);
+
+    // All groups can VIEW any group's data (read-only). Super admin sees all when groupId=all.
+    if (groupId && groupId !== 'all') {
+      userQuery.group = groupId;
+    } else if (!isSuperAdmin && hasRealGroup) {
+      userQuery.group = userGroup;
+    }
+
+    const users = await User.find(userQuery)
+      .select('_id name email role group')
       .lean();
 
     /* ======================================================
@@ -398,12 +422,19 @@ export const getFinanceMetrics = async (req, res, next) => {
     };
     if (!isAllMembers) {
       txQuery.userId = userObjectId;
+    } else {
+      // Exclude transactions from super admin users when fetching all members
+      const superAdminUsers = await User.find({ role: 'SUPER_ADMIN' }).select('_id').lean();
+      const superAdminIds = superAdminUsers.map(u => u._id);
+      if (superAdminIds.length > 0) {
+        txQuery.userId = { $nin: superAdminIds };
+      }
     }
 
     const allTransactions = await FinanceTransaction.find(txQuery).lean();
 
     /* ======================================================
-       GROUP TRANSACTIONS BY USER
+       GROUP_TRANSACTIONS BY USER
     ====================================================== */
 
     const txByUser = {};
@@ -568,6 +599,48 @@ export const getFinanceMetrics = async (req, res, next) => {
     });
 
     /* ======================================================
+       BY-GROUP SUMMARY (all groups can see - read-only summary)
+       When viewing all members, return summary for every group
+    ====================================================== */
+
+    let byGroupSummary = [];
+    if (isAllMembers && (!groupId || groupId === 'all')) {
+      const allGroupUsers = await User.find({
+        role: { $ne: 'SUPER_ADMIN' },
+        group: { $nin: ['SUPER_ADMIN', 'ADMIN', null, ''] }
+      })
+        .select('_id name email group')
+        .lean();
+
+      const byGroup = {};
+      for (const u of allGroupUsers) {
+        const g = u.group || 'NONE';
+        if (!byGroup[g]) byGroup[g] = { group: g, actualIncome: 0, actualExpense: 0, pendingIncome: 0, target: 0, userCount: 0 };
+        const uid = u._id.toString();
+        const txs = filterByRange(txByUser[uid] || [], startDate, endDate);
+        const m = calculateMetrics(txs);
+        const target = monthlyTargetByUser[uid] || 0;
+        byGroup[g].actualIncome += m.actualIncome;
+        byGroup[g].actualExpense += m.actualExpense;
+        byGroup[g].pendingIncome += m.pendingIncome;
+        byGroup[g].target += target;
+        byGroup[g].userCount += 1;
+      }
+
+      const groupList = await Group.find().sort({ sortOrder: 1, code: 1 }).lean();
+      byGroupSummary = groupList.map(g => {
+        const data = byGroup[g.code] || { actualIncome: 0, actualExpense: 0, pendingIncome: 0, target: 0, userCount: 0 };
+        return {
+          group: g.code,
+          groupName: g.name,
+          ...data,
+          profit: data.actualIncome - data.actualExpense,
+          gap: data.target - data.actualIncome
+        };
+      });
+    }
+
+    /* ======================================================
        RESPONSE
     ====================================================== */
 
@@ -589,7 +662,8 @@ export const getFinanceMetrics = async (req, res, next) => {
             byUser: buildFullByUserArray(users, monthlyByUser)
           },
           week: weeklyMetrics
-        }
+        },
+        byGroupSummary
       })
     );
   } catch (err) {

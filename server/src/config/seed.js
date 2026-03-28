@@ -1,8 +1,30 @@
 import dotenv from 'dotenv';
 import User from '../models/User.js';
+import Group from '../models/Group.js';
 import bcrypt from 'bcrypt';
 
 dotenv.config();
+
+const DEFAULT_GROUPS = [
+  { name: 'Group 1', code: 'GROUP_1', sortOrder: 1 },
+  { name: 'Group 2', code: 'GROUP_2', sortOrder: 2 },
+  { name: 'Group 3', code: 'GROUP_3', sortOrder: 3 },
+  { name: 'Group 4', code: 'GROUP_4', sortOrder: 4 }
+];
+
+export const seedGroups = async () => {
+  try {
+    const count = await Group.countDocuments();
+    if (count > 0) {
+      console.log('✅ Groups already exist, skipping group seed');
+      return;
+    }
+    await Group.insertMany(DEFAULT_GROUPS);
+    console.log('✅ Default groups created (GROUP_1, GROUP_2, GROUP_3, GROUP_4)');
+  } catch (error) {
+    console.error('❌ Error seeding groups:', error.message);
+  }
+};
 
 export const seedSuperAdmin = async () => {
   try {
@@ -33,6 +55,8 @@ export const seedSuperAdmin = async () => {
       email: email.toLowerCase(),
       passwordHash,
       name,
+      group: 'SUPER_ADMIN',
+      degree: 'SUPER_ADMIN',
       role: 'SUPER_ADMIN', // Keep as SUPER_ADMIN for system admin
       editor: true,
       status: 'active'

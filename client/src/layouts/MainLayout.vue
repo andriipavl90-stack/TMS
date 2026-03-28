@@ -2,7 +2,7 @@
   <div class="main-layout">
     <aside class="sidebar">
       <div class="sidebar-header">
-         <img src="/logo.png" style="width: 100%;" alt="G-M System Logo" class="logo" />
+        <img src="/logo.png" style="width: 100%;" alt="G-M System Logo" class="logo" />
       </div>
 
       <nav class="sidebar-nav">
@@ -14,6 +14,47 @@
           <span>User Management</span>
         </router-link>
 
+        <!-- ==========================================================================================
+                             Daily Report Management     Created By : Tom(2026/2/24 11:22 AM)
+        ========================================================================================== -->
+        <div class="nav-group">
+          <div @click="dailyreportMenuOpen = !dailyreportMenuOpen" class="nav-item nav-group-header"
+            :class="{ active: isDailyReportRoute }">
+            <span class="nav-icon">📄</span>
+            <span>Daily Report</span>
+            <span v-if="showActions"  class="badge">⏳</span>
+            <span class="nav-arrow" :class="{ open: dailyreportMenuOpen }">▼</span>
+          </div>
+
+          <div v-show="dailyreportMenuOpen" class="nav-submenu">
+            
+            <router-link v-if="isAdmin" :to="{ name: 'all' }" class="nav-item nav-subitem">
+              <span class="nav-icon">💾</span>
+              <span>ALL</span>
+              <span v-if="showActions"  class="badge">⏳</span>
+            </router-link>
+            <div v-else >
+                <router-link :to="{ name: 'dailyreport' }" class="nav-item nav-subitem">
+              <span class="nav-icon">📄</span>
+              <span>Daily Report</span>
+            </router-link>
+
+            <router-link :to="{ name: 'reportHistory' }" class="nav-item nav-subitem">
+              <span class="nav-icon">📈</span>
+              <span>Report History</span>
+            </router-link>
+
+            <router-link  v-if="isBoss"   :to="{ name: 'groupReportHistory' }" class="nav-item nav-subitem">
+              <span class="nav-icon">📈</span>
+              <span>Group Report History</span>
+            </router-link>
+            </div>       
+          </div>
+        </div>
+
+
+
+        
         <!-- =====================
              PROFILES
         ====================== -->
@@ -65,7 +106,7 @@
             <span class="nav-arrow" :class="{ open: assignmentMenuOpen }">▼</span>
           </div> -->
 
-          <!-- <div class="nav-submenu">
+        <!-- <div class="nav-submenu">
             <router-link
               :to="{ name: 'Assignments' }"
               class="nav-item nav-subitem"
@@ -73,7 +114,7 @@
               <span class="nav-icon">📝</span>
               <span>Assignments</span>
             </router-link> -->
-          <!-- 
+        <!-- 
             <router-link
               :to="{ name: 'AssignmentCreate' }"
               class="nav-item nav-subitem"
@@ -82,14 +123,14 @@
               <span>New Assignment</span>
             </router-link> -->
 
-          <!-- <router-link
+        <!-- <router-link
               :to="{ name: 'EarningsTrend' }"
               class="nav-item nav-subitem"
             >
               <span class="nav-icon">📈</span>
               <span>Earnings Trend</span>
             </router-link> -->
-          <!-- </div> -->
+        <!-- </div> -->
         <!-- </div> -->
 
         <!-- =====================
@@ -186,17 +227,36 @@ import { ROLES, LEGACY_ROLES } from '../constants/roles';
 const authStore = useAuthStore();
 const route = useRoute();
 
+
+const dailyreportMenuOpen = ref(false);
+
 const profileMenuOpen = ref(false);
 const assignmentMenuOpen = ref(false);
 const financeMenuOpen = ref(false);
 
+const isBadge = ref(false)
+const showActions = computed(() => isBadge.value)
+
+const Badge = () => {
+ 
+  if (authStore.user.group === "*") isBadge.value = true
+  else isBadge.value = false
+  // alert(authStore.user.group)
+}
+
 const isAdmin = computed(() =>
-  hasAnyRole(authStore.user, [ROLES.SUPER_ADMIN, ROLES.ADMIN, LEGACY_ROLES.BOSS])
+  hasAnyRole(authStore.user, [ROLES.SUPER_ADMIN])
+);
+const isBoss = computed(() =>
+  hasAnyRole(authStore.user, [ROLES.ADMIN, LEGACY_ROLES.BOSS])
 );
 
 const isFinanceAdmin = computed(() =>
   hasAnyRole(authStore.user, [ROLES.SUPER_ADMIN, LEGACY_ROLES.BOSS])
 );
+
+
+const isDailyReportRoute = computed(() => route.path.startsWith('/dailyreports'));
 
 const isProfileRoute = computed(() => route.path.startsWith('/profiles'));
 const isAssignmentsRoute = computed(() => route.path.startsWith('/assignments'));
@@ -205,6 +265,8 @@ const isFinanceRoute = computed(() => route.path.startsWith('/finance'));
 watch(
   () => route.path,
   (path) => {
+    Badge();
+    if (path.startsWith('/dailyreports')) dailyreportMenuOpen.value = true;
     if (path.startsWith('/profiles')) profileMenuOpen.value = true;
     if (path.startsWith('/assignments')) assignmentMenuOpen.value = true;
     if (path.startsWith('/finance')) financeMenuOpen.value = true;
@@ -372,7 +434,13 @@ const handleLogout = async () => {
   transition: transform var(--transition-base);
   opacity: 0.7;
 }
-
+.badge {
+  background-color: rgba(224, 13, 13, 0.897);
+  color: white;
+  padding: 4px 4px;
+  text-align: center;
+  border-radius: 5px;
+}
 .nav-arrow.open {
   transform: rotate(180deg);
 }
@@ -546,11 +614,11 @@ const handleLogout = async () => {
   .sidebar {
     width: 240px;
   }
-  
+
   .topbar {
     padding: 0 var(--spacing-lg);
   }
-  
+
   .main-content {
     padding: var(--spacing-lg);
   }
@@ -560,19 +628,19 @@ const handleLogout = async () => {
   .sidebar {
     width: 220px;
   }
-  
+
   .sidebar-header h2 {
     font-size: var(--font-size-xl);
   }
-  
+
   .page-title {
     font-size: var(--font-size-xl);
   }
-  
+
   .main-content {
     padding: var(--spacing-md);
   }
-  
+
   .user-email {
     display: none;
   }
@@ -582,18 +650,18 @@ const handleLogout = async () => {
   .main-layout {
     flex-direction: column;
   }
-  
+
   .sidebar {
     width: 100%;
     height: auto;
     max-height: 60vh;
   }
-  
+
   .topbar {
     height: 60px;
     padding: 0 var(--spacing-md);
   }
-  
+
   .page-title {
     font-size: var(--font-size-lg);
   }
