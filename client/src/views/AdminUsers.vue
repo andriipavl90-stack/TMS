@@ -165,9 +165,20 @@
               </label>
             </div>
             <div v-if="tempPassword" class="temp-password-alert">
-              <strong>Temporary Password:</strong> {{ tempPassword }}
-              <br />
-              <small>Save this password! The user needs it to log in the first time.</small>
+              <div class="temp-password-row">
+                <div class="temp-password-main">
+                  <strong>Temporary Password:</strong>
+                  <span class="temp-password-value">{{ tempPassword }}</span>
+                  <small>Save this password! The user needs it to log in the first time.</small>
+                </div>
+                <button
+                  type="button"
+                  class="btn-copy-temp-password"
+                  @click="copyCreateTempPassword"
+                >
+                  {{ createTempPasswordCopied ? 'Copied!' : 'Copy' }}
+                </button>
+              </div>
             </div>
             <div class="form-actions">
               <button type="button" @click="closeModal" class="btn-cancel">Cancel</button>
@@ -373,6 +384,7 @@ const showModal = ref(false);
 const editingUser = ref(null);
 const saving = ref(false);
 const tempPassword = ref('');
+const createTempPasswordCopied = ref(false);
 
 // Reset password flow (modal + clipboard)
 const showResetConfirmModal = ref(false);
@@ -455,6 +467,7 @@ const openCreateModal = () => {
     editor: false
   };
   tempPassword.value = '';
+  createTempPasswordCopied.value = false;
   showModal.value = true;
 };
 
@@ -470,6 +483,7 @@ const openEditModal = (user) => {
     editor: user.editor || false
   };
   tempPassword.value = '';
+  createTempPasswordCopied.value = false;
   showModal.value = true;
 };
 
@@ -477,6 +491,7 @@ const closeModal = () => {
   showModal.value = false;
   editingUser.value = null;
   tempPassword.value = '';
+  createTempPasswordCopied.value = false;
 };
 
 const handleSubmit = async () => {
@@ -501,6 +516,7 @@ const handleSubmit = async () => {
       const response = await adminService.createUser(form.value);
       if (response.ok && response.data) {
         tempPassword.value = response.data.tempPassword || '';
+        createTempPasswordCopied.value = false;
         await loadUsers();
       }
     }
@@ -533,6 +549,11 @@ async function copyTextToClipboard(text) {
     }
   }
 }
+
+const copyCreateTempPassword = async () => {
+  if (!tempPassword.value) return;
+  createTempPasswordCopied.value = await copyTextToClipboard(tempPassword.value);
+};
 
 const closeResetConfirm = () => {
   if (resettingPassword.value) return;
@@ -1162,10 +1183,66 @@ const deleteGroup = async (group) => {
   color: #92400e;
 }
 
+.temp-password-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.temp-password-main {
+  flex: 1;
+  min-width: 0;
+}
+
 .temp-password-alert strong {
   display: block;
   margin-bottom: var(--spacing-xs);
   font-size: var(--font-size-sm);
+}
+
+.temp-password-value {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  font-family: ui-monospace, monospace;
+  font-size: var(--font-size-sm);
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.temp-password-main small {
+  display: block;
+  line-height: 1.4;
+}
+
+.btn-copy-temp-password {
+  flex-shrink: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1.5px solid rgba(217, 119, 6, 0.45);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: #92400e;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  align-self: center;
+}
+
+.btn-copy-temp-password:hover {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(217, 119, 6, 0.65);
+}
+
+@media (max-width: 400px) {
+  .temp-password-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-copy-temp-password {
+    align-self: stretch;
+  }
 }
 
 .form-actions {
