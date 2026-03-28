@@ -92,7 +92,7 @@
     </div>
 
     <!-- Create/Edit Modal -->
-    <div v-if="showModal" class="modal-overlay" @click="closeModal">
+    <div v-if="showModal" class="modal-overlay">
       <div class="modal" @click.stop>
         <div class="modal-header">
           <h2>{{ editingUser ? 'Edit User' : 'Create User' }}</h2>
@@ -172,8 +172,72 @@
       </div>
     </div>
 
+    <!-- Reset password: confirm -->
+    <div v-if="showResetConfirmModal" class="modal-overlay">
+      <div class="modal modal-reset" @click.stop>
+        <div class="modal-header">
+          <h2>Reset password?</h2>
+          <button type="button" @click="closeResetConfirm" class="close-btn">✕</button>
+        </div>
+        <div class="modal-content">
+          <p class="reset-modal-text">
+            Reset password for <strong>{{ resetConfirmUser?.name }}</strong>? A new temporary password will be generated.
+          </p>
+          <div class="form-actions reset-modal-actions">
+            <button type="button" @click="closeResetConfirm" class="btn-cancel" :disabled="resettingPassword">
+              Cancel
+            </button>
+            <button type="button" @click="executeResetPassword" class="btn-reset-modal" :disabled="resettingPassword">
+              {{ resettingPassword ? 'Resetting…' : 'Reset password' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reset password: success (password copied + shown) -->
+    <div v-if="showResetSuccessModal" class="modal-overlay">
+      <div class="modal modal-reset" @click.stop>
+        <div class="modal-header">
+          <h2>Password reset</h2>
+          <button type="button" @click="closeResetSuccess" class="close-btn">✕</button>
+        </div>
+        <div class="modal-content">
+          <p class="reset-modal-text">
+            A new temporary password for <strong>{{ resetSuccessUserName }}</strong> is below.
+            {{ resetPasswordInitialCopyOk ? 'It has been copied to your clipboard.' : 'Copy it to share with the user.' }}
+          </p>
+          <div class="reset-password-box">
+            <code>{{ resetSuccessPassword }}</code>
+          </div>
+          <div class="form-actions reset-modal-actions">
+            <button type="button" @click="copyResetPasswordAgain" class="btn-secondary">
+              {{ resetPasswordInitialCopyOk ? 'Copy again' : 'Copy password' }}
+            </button>
+            <button type="button" @click="closeResetSuccess" class="btn-save">Done</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reset password: error -->
+    <div v-if="showResetErrorModal" class="modal-overlay">
+      <div class="modal modal-reset" @click.stop>
+        <div class="modal-header">
+          <h2>Reset failed</h2>
+          <button type="button" @click="closeResetError" class="close-btn">✕</button>
+        </div>
+        <div class="modal-content">
+          <p class="reset-modal-text reset-modal-error">{{ resetErrorMessage }}</p>
+          <div class="form-actions reset-modal-actions">
+            <button type="button" @click="closeResetError" class="btn-save">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Group Management Modal (Super Admin only) -->
-    <div v-if="showGroupModal" class="modal-overlay" @click="closeGroupModal">
+    <div v-if="showGroupModal" class="modal-overlay">
       <div class="modal modal-wide" @click.stop>
         <div class="modal-header">
           <h2>Manage Groups</h2>
@@ -258,6 +322,17 @@ const showModal = ref(false);
 const editingUser = ref(null);
 const saving = ref(false);
 const tempPassword = ref('');
+
+// Reset password flow (modal + clipboard)
+const showResetConfirmModal = ref(false);
+const resetConfirmUser = ref(null);
+const resettingPassword = ref(false);
+const showResetSuccessModal = ref(false);
+const resetSuccessPassword = ref('');
+const resetSuccessUserName = ref('');
+const resetPasswordInitialCopyOk = ref(false);
+const showResetErrorModal = ref(false);
+const resetErrorMessage = ref('');
 
 const isSuperAdmin = computed(() => authStore.user?.role === ROLES.SUPER_ADMIN);
 
@@ -376,19 +451,81 @@ const handleSubmit = async () => {
   }
 };
 
-const handleResetPassword = async (user) => {
-  if (!confirm(`Reset password for ${user.name}? A new temporary password will be generated.`)) {
-    return;
+async function copyTextToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
   }
+}
+
+const closeResetConfirm = () => {
+  if (resettingPassword.value) return;
+  showResetConfirmModal.value = false;
+  resetConfirmUser.value = null;
+};
+
+const closeResetSuccess = () => {
+  showResetSuccessModal.value = false;
+  resetSuccessPassword.value = '';
+  resetSuccessUserName.value = '';
+  resetPasswordInitialCopyOk.value = false;
+};
+
+const closeResetError = () => {
+  showResetErrorModal.value = false;
+  resetErrorMessage.value = '';
+};
+
+const handleResetPassword = (user) => {
+  resetConfirmUser.value = user;
+  showResetConfirmModal.value = true;
+};
+
+const copyResetPasswordAgain = async () => {
+  await copyTextToClipboard(resetSuccessPassword.value);
+};
+
+const executeResetPassword = async () => {
+  const user = resetConfirmUser.value;
+  if (!user) return;
+  resettingPassword.value = true;
+  error.value = null;
   try {
     const response = await adminService.resetUserPassword(user.id);
     if (response.ok && response.data) {
       const newPassword = response.data.tempPassword || '';
-      alert(`Password reset successful!\n\nTemporary Password: ${newPassword}\n\nShare this with the user.`);
+      const copied = await copyTextToClipboard(newPassword);
+      showResetConfirmModal.value = false;
+      resetConfirmUser.value = null;
+      resetSuccessPassword.value = newPassword;
+      resetSuccessUserName.value = user.name;
+      resetPasswordInitialCopyOk.value = copied;
+      showResetSuccessModal.value = true;
     }
   } catch (err) {
-    error.value = err.response?.data?.message || 'Failed to reset password';
-    alert(`Error: ${error.value}`);
+    const msg = err.response?.data?.message || 'Failed to reset password';
+    error.value = msg;
+    showResetConfirmModal.value = false;
+    resetConfirmUser.value = null;
+    resetErrorMessage.value = msg;
+    showResetErrorModal.value = true;
+  } finally {
+    resettingPassword.value = false;
   }
 };
 
@@ -973,6 +1110,64 @@ const deleteGroup = async (group) => {
 .btn-retry:hover {
   transform: translateY(-1px);
   box-shadow: var(--shadow-lg);
+}
+
+.modal-reset {
+  max-width: 440px;
+}
+
+.reset-modal-text {
+  margin: 0 0 var(--spacing-lg) 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.reset-modal-error {
+  color: var(--color-error);
+}
+
+.reset-password-box {
+  background: var(--bg-tertiary);
+  border: 1.5px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  word-break: break-all;
+}
+
+.reset-password-box code {
+  font-size: var(--font-size-sm);
+  font-family: ui-monospace, monospace;
+  color: var(--text-primary);
+}
+
+.reset-modal-actions {
+  margin-top: 0;
+  flex-wrap: wrap;
+}
+
+.btn-reset-modal {
+  padding: var(--spacing-md) var(--spacing-xl);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  background: linear-gradient(135deg, var(--color-warning) 0%, #d97706 100%);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
+}
+
+.btn-reset-modal:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-reset-modal:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
