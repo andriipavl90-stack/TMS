@@ -1,37 +1,21 @@
 <template>
-  <div class="profiles-table-container">
-    <table class="profiles-table">
-      <thead>
-        <tr>
-          <th>Group</th>
-          <th>Name</th>
-          <th>Country</th>
-          <th>Contact</th>
-          <th>Tags</th>
-          <th>Status</th>
-          <th>Created</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <FreelancerProfileRow
-          v-for="profile in profiles"
-          :key="profile._id || profile.id"
-          :profile="profile"
-          @view="handleView"
-          @edit="handleEdit"
-          @delete="handleDelete"
-        />
-        <tr v-if="profiles.length === 0">
-          <td colspan="7" class="empty-state">
-            No profiles found.
-            <button v-if="canCreate" @click="$emit('create')" class="btn-link">
-              Create one
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+  <div class="profiles-cards-wrap">
+    <div v-if="profiles.length === 0" class="empty-state">
+      No profiles found.
+      <button v-if="canCreate" type="button" @click="$emit('create')" class="btn-link">
+        Create one
+      </button>
+    </div>
+    <div v-else class="profiles-cards">
+      <FreelancerProfileRow
+        v-for="profile in profiles"
+        :key="profile._id || profile.id"
+        :profile="profile"
+        @view="handleView"
+        @edit="handleEdit"
+        @delete="handleDelete"
+      />
+    </div>
   </div>
 </template>
 
@@ -41,7 +25,7 @@ import { useAuthStore } from '../../composables/useAuth';
 import { canCreateFreelancerProfile } from '../../utils/profilePermissions';
 import FreelancerProfileRow from './FreelancerProfileRow.vue';
 
-const props = defineProps({
+defineProps({
   profiles: {
     type: Array,
     default: () => []
@@ -70,47 +54,23 @@ const handleDelete = (profile) => {
 </script>
 
 <style scoped>
-.profiles-table-container {
-  background: var(--bg-primary);
-  border-radius: 8px;
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-  border: 1px solid var(--border-light);
-}
-
-.profiles-table {
+.profiles-cards-wrap {
   width: 100%;
-  border-collapse: collapse;
 }
 
-.profiles-table thead {
-  background: var(--bg-tertiary);
-}
-
-.profiles-table th {
-  padding: 16px;
-  text-align: left;
-  font-weight: 600;
-  color: var(--text-primary);
-  background: var(--bg-tertiary);
-  border-bottom: 2px solid var(--border-light);
-}
-
-.profiles-table tbody tr {
-  border-bottom: 1px solid var(--border-light);
-}
-
-.profiles-table tbody tr:last-child {
-  border-bottom: none;
-}
-
-.profiles-table td {
-  color: var(--text-primary);
+.profiles-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
 }
 
 .empty-state {
   text-align: center;
-  padding: 40px;
+  padding: 48px 24px;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
   color: var(--text-tertiary);
 }
 
@@ -125,6 +85,12 @@ const handleDelete = (profile) => {
 }
 
 .btn-link:hover {
-  color: #2980b9;
+  color: var(--color-primary-dark, #2980b9);
+}
+
+@media (max-width: 480px) {
+  .profiles-cards {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

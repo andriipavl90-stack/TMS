@@ -276,7 +276,6 @@ onMounted(async () => {
   margin-bottom: var(--spacing-lg);
   display: flex;
   gap: var(--spacing-md);
-  flex-wrap: wrap;
   box-shadow: var(--shadow-md);
   border: 1px solid var(--border-light);
 }

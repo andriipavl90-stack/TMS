@@ -1,37 +1,21 @@
 <template>
-  <div class="profiles-table-container">
-    <table class="profiles-table">
-      <thead>
-        <tr>
-          <th>Group</th>
-          <th>Name</th>
-          <th>Country</th>
-          <th>Contact</th>
-          <th>Tags</th>
-          <th>Status</th>
-          <th>Created</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <ProfileRow
-          v-for="profile in profiles"
-          :key="profile._id || profile.id"
-          :profile="profile"
-          @view="handleView"
-          @edit="handleEdit"
-          @delete="handleDelete"
-        />
-        <tr v-if="profiles.length === 0">
-          <td colspan="7" class="empty-state">
-            No profiles found.
-            <button v-if="canCreate" @click="$emit('create')" class="btn-link">
-              Create one
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+  <div class="profiles-cards-wrap">
+    <div v-if="profiles.length === 0" class="empty-state">
+      No profiles found.
+      <button v-if="canCreate" type="button" @click="$emit('create')" class="btn-link">
+        Create one
+      </button>
+    </div>
+    <div v-else class="profiles-cards">
+      <ProfileRow
+        v-for="profile in profiles"
+        :key="profile._id || profile.id"
+        :profile="profile"
+        @view="handleView"
+        @edit="handleEdit"
+        @delete="handleDelete"
+      />
+    </div>
   </div>
 </template>
 
@@ -41,7 +25,7 @@ import { useAuthStore } from '../../composables/useAuth';
 import { normalizeRole, ROLES } from '../../constants/roles.js';
 import ProfileRow from './ProfileRow.vue';
 
-const props = defineProps({
+defineProps({
   profiles: {
     type: Array,
     default: () => []
@@ -55,9 +39,11 @@ const authStore = useAuthStore();
 const canCreate = computed(() => {
   if (!authStore.user) return false;
   const userRole = normalizeRole(authStore.user.role);
-  return userRole === ROLES.SUPER_ADMIN || 
-         userRole === ROLES.ADMIN || 
-         authStore.user.editor === true;
+  return (
+    userRole === ROLES.SUPER_ADMIN ||
+    userRole === ROLES.ADMIN ||
+    authStore.user.editor === true
+  );
 });
 
 const handleView = (profile) => {
@@ -74,52 +60,23 @@ const handleDelete = (profile) => {
 </script>
 
 <style scoped>
-.profiles-table-container {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  overflow: hidden;
-  border: 1px solid var(--border-light);
-}
-
-.profiles-table {
+.profiles-cards-wrap {
   width: 100%;
-  border-collapse: collapse;
-  font-size: var(--font-size-sm);
 }
 
-.profiles-table thead {
-  background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
-}
-
-.profiles-table th {
-  padding: var(--spacing-lg);
-  text-align: left;
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-secondary);
-  border-bottom: 2px solid var(--border-light);
-  font-size: var(--font-size-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.profiles-table td {
-  padding: var(--spacing-lg);
-  border-bottom: 1px solid var(--border-light);
-  color: var(--text-primary);
-}
-
-.profiles-table tbody tr {
-  transition: all var(--transition-fast);
-}
-
-.profiles-table tbody tr:hover {
-  background: var(--bg-tertiary);
+.profiles-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--spacing-lg);
 }
 
 .empty-state {
   text-align: center;
   padding: var(--spacing-3xl);
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
   color: var(--text-tertiary);
   font-size: var(--font-size-sm);
 }
@@ -142,14 +99,9 @@ const handleDelete = (profile) => {
   text-decoration: underline;
 }
 
-@media (max-width: 768px) {
-  .profiles-table {
-    font-size: var(--font-size-xs);
-  }
-  
-  .profiles-table th,
-  .profiles-table td {
-    padding: var(--spacing-md);
+@media (max-width: 480px) {
+  .profiles-cards {
+    grid-template-columns: 1fr;
   }
 }
 </style>

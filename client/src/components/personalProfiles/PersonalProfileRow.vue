@@ -1,77 +1,83 @@
 <template>
-  <tr class="table-row-clickable" @click="$emit('view', profile)">
-    <td>
-      <div class="name-cell">
-        <div v-if="profile.pictureFileId">
+  <article class="profile-card" @click="$emit('view', profile)">
+    <div class="card-top">
+      <div class="card-identity">
+        <div v-if="profile.pictureFileId" class="avatar-wrap">
           <img
             :src="getPictureUrl(profile.pictureFileId._id || profile.pictureFileId)"
-            alt="Profile"
-            class="table-avatar"
+            alt=""
+            class="card-avatar"
           />
         </div>
-        <span v-else class="table-avatar-placeholder">👤</span>
-        <span>{{ profile.name }}</span>
+        <span v-else class="card-avatar card-avatar-placeholder" aria-hidden="true">👤</span>
+        <div class="card-title-block">
+          <h3 class="card-name">{{ profile.name }}</h3>
+        </div>
       </div>
-    </td>
-    <td>{{ profile.country || 'N/A' }}</td>
-    <td>
-      <div class="contact-cell">
-        <div v-if="profile.email">{{ displayEmail(profile) }}</div>
-        <div v-if="profile.phone">{{ displayPhone(profile) }}</div>
-        <div v-if="!profile.email && !profile.phone" class="text-muted">N/A</div>
+      <span class="status-badge" :class="`status-${profile.status}`">
+        {{ profile.status }}
+      </span>
+    </div>
+
+    <div class="card-body">
+      <div class="card-row">
+        <span class="card-label">Country</span>
+        <span class="card-value">{{ profile.country || '—' }}</span>
       </div>
-    </td>
-    <td>
-      <div class="tags-cell">
+      <div class="card-row card-contact">
+        <span class="card-label">Contact</span>
+        <div class="card-value-stack">
+          <span v-if="profile.email">{{ displayEmail(profile) }}</span>
+          <span v-if="profile.phone">{{ displayPhone(profile) }}</span>
+          <span v-if="!profile.email && !profile.phone" class="text-muted">N/A</span>
+        </div>
+      </div>
+      <div v-if="profile.tags && profile.tags.length" class="card-tags">
         <span
-          v-for="tag in (profile.tags || []).slice(0, 2)"
+          v-for="tag in (profile.tags || []).slice(0, 4)"
           :key="tag"
           class="tag-small"
         >
           {{ tag }}
         </span>
-        <span
-          v-if="profile.tags && profile.tags.length > 2"
-          class="tag-more"
-        >
-          +{{ profile.tags.length - 2 }}
+        <span v-if="profile.tags.length > 4" class="tag-more">
+          +{{ profile.tags.length - 4 }}
         </span>
       </div>
-    </td>
-    <td>
-      <span class="status-badge" :class="`status-${profile.status}`">
-        {{ profile.status }}
-      </span>
-    </td>
-    <td>{{ formatDate(profile.createdAt) }}</td>
-    <td @click.stop>
-      <div class="action-buttons">
-        <button @click.stop="$emit('view', profile)" class="btn-view">View</button>
-        <button
-          v-if="canEdit"
-          @click.stop="$emit('edit', profile)"
-          class="btn-edit"
-        >
-          Edit
-        </button>
-        <button
-          v-if="canDelete"
-          @click.stop="$emit('delete', profile)"
-          class="btn-delete"
-        >
-          Delete
-        </button>
+      <div class="card-row">
+        <span class="card-label">Created</span>
+        <span class="card-value">{{ formatDate(profile.createdAt) }}</span>
       </div>
-    </td>
-  </tr>
+    </div>
+
+    <div class="card-actions" @click.stop>
+      <button type="button" @click.stop="$emit('view', profile)" class="btn-view">View</button>
+      <button
+        v-if="canEdit"
+        type="button"
+        @click.stop="$emit('edit', profile)"
+        class="btn-edit"
+      >
+        Edit
+      </button>
+      <button
+        v-if="canDelete"
+        type="button"
+        @click.stop="$emit('delete', profile)"
+        class="btn-delete"
+      >
+        Delete
+      </button>
+    </div>
+  </article>
 </template>
 
 <script setup>
 import { computed } from 'vue';
 import { useAuthStore } from '../../composables/useAuth';
-import { 
-  canEditPersonalProfile, 
-  canDeletePersonalProfile 
+import {
+  canEditPersonalProfile,
+  canDeletePersonalProfile
 } from '../../utils/profilePermissions';
 
 const props = defineProps({
@@ -81,7 +87,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['view', 'edit', 'delete']);
+defineEmits(['view', 'edit', 'delete']);
 
 const authStore = useAuthStore();
 
@@ -115,120 +121,188 @@ const displayPhone = (profile) => {
 </script>
 
 <style scoped>
-.table-row-clickable {
-  border: 1px solid #dee2e6;
-  padding: 20px;
-  border-radius: 8px;
+.profile-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg, 8px);
+  box-shadow: var(--shadow-md, var(--shadow-sm));
+  padding: var(--spacing-lg, 20px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md, 16px);
   cursor: pointer;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
 
-.table-row-clickable:hover {
-  background: #babdc0;
-}
-td{
-  padding: 10px;
-}
-.name-cell {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.profile-card:hover {
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.08));
+  border-color: var(--border-medium);
+  transform: translateY(-2px);
 }
 
-.table-avatar,
-.table-avatar-placeholder {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: #f0f0f0;
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md, 16px);
+}
+
+.card-identity {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 1rem;
+  gap: var(--spacing-md, 12px);
+  min-width: 0;
+}
+
+.avatar-wrap {
   flex-shrink: 0;
 }
 
-.contact-cell {
+.card-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.card-avatar-placeholder {
+  border: 1px solid var(--border-light);
+}
+
+.card-title-block {
+  min-width: 0;
+}
+
+.card-name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.875rem;
+}
+
+.card-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.card-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.card-value {
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.card-value-stack {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.9rem;
+  color: var(--text-primary);
+  word-break: break-word;
 }
 
 .text-muted {
-  color: #7f8c8d;
+  color: var(--text-tertiary);
   font-style: italic;
 }
 
-.tags-cell {
+.card-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
   align-items: center;
 }
 
 .tag-small {
-  background: #ecf0f1;
-  color: #2c3e50;
-  padding: 2px 8px;
-  border-radius: 12px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  padding: 4px 10px;
+  border-radius: 999px;
   font-size: 0.75rem;
 }
 
 .tag-more {
-  color: #7f8c8d;
+  color: var(--text-tertiary);
   font-size: 0.75rem;
 }
 
 .status-badge {
-  display: inline-block;
+  flex-shrink: 0;
   padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  font-weight: 500;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
 }
 
 .status-active {
-  background: #2ecc71;
-  color: white;
+  background: rgba(46, 204, 113, 0.15);
+  color: #1e8449;
 }
 
 .status-archived {
-  background: #95a5a6;
-  color: white;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
 }
 
-.action-buttons {
+.card-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
 }
 
 .btn-view,
 .btn-edit {
-  padding: 6px 12px;
-  background: #3498db;
-  color: white;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  color: var(--text-inverse, #fff);
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.85rem;
-  transition: background 0.2s;
+  font-weight: 500;
+  transition: opacity 0.15s, transform 0.15s;
 }
 
 .btn-view:hover,
 .btn-edit:hover {
-  background: #2980b9;
+  opacity: 0.92;
+  transform: translateY(-1px);
 }
 
 .btn-delete {
-  padding: 6px 12px;
+  padding: 8px 14px;
   background: #e74c3c;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.85rem;
-  transition: background 0.2s;
+  font-weight: 500;
+  transition: background 0.15s;
 }
 
 .btn-delete:hover {

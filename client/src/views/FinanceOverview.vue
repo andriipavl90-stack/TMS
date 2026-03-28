@@ -731,7 +731,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
 
     <!-- ERROR STATE -->
     <div v-if="error" class="error-container">
-      <div class="error-icon">âš ï¸</div>
+      <div class="error-icon">⚠️</div>
       <h3>Failed to load data</h3>
       <p>{{ error.message || 'Please try again later' }}</p>
       <button @click="loadFinanceOverview" class="retry-button">Retry</button>
@@ -743,7 +743,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
       <section v-if="byGroupSummary && byGroupSummary.length > 0" class="dashboard-section groups-summary-section">
         <div class="section-header">
           <h2 class="section-title">
-            <span class="title-icon">ðŸ“‹</span>
+            <span class="title-icon">📋</span>
             All Groups Summary - {{ formatMonth(selectedMonth) }}
           </h2>
         </div>
@@ -782,7 +782,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
       <section class="dashboard-section">
         <div class="section-header">
           <h2 class="section-title">
-            <span class="title-icon">ðŸ“Š</span>
+            <span class="title-icon">📊</span>
             Finance Overview
           </h2>
         </div>
@@ -959,7 +959,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
       <section v-if="computedWeekMetricsList && computedWeekMetricsList.length > 0" class="dashboard-section">
         <div class="section-header">
           <h2 class="section-title">
-            <span class="title-icon">ðŸ“†</span>
+            <span class="title-icon">📆</span>
             Weekly Breakdown
           </h2>
         </div>
@@ -991,7 +991,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
             <!-- Metrics Grid -->
             <div class="week-metrics-grid">
               <div class="week-metric-item">
-                <div class="week-metric-icon income-icon">ðŸ’°</div>
+                <div class="week-metric-icon income-icon">💰</div>
                 <div class="week-metric-content">
                   <span class="week-metric-label">Income</span>
                   <span class="week-metric-value income-value">{{ formatAmount(weekData.totalIncome) }}</span>
@@ -999,7 +999,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
               </div>
 
               <div class="week-metric-item">
-                <div class="week-metric-icon expense-icon">ðŸ’¸</div>
+                <div class="week-metric-icon expense-icon">💸</div>
                 <div class="week-metric-content">
                   <span class="week-metric-label">Outcome</span>
                   <span class="week-metric-value expense-value">{{ formatAmount(weekData.totalOutcome) }}</span>
@@ -1007,7 +1007,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
               </div>
 
               <div class="week-metric-item profit-item">
-                <div class="week-metric-icon profit-icon">ðŸ“ˆ</div>
+                <div class="week-metric-icon profit-icon">📈</div>
                 <div class="week-metric-content">
                   <span class="week-metric-label">Profit</span>
                   <span class="week-metric-value profit-value" :class="weekData.totalProfit >= 0 ? 'income-value' : 'expense-value'">
@@ -1017,7 +1017,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
               </div>
 
               <div class="week-metric-item">
-                <div class="week-metric-icon pending-icon">â³</div>
+                <div class="week-metric-icon pending-icon">⏳</div>
                 <div class="week-metric-content">
                   <span class="week-metric-label">Pending</span>
                   <span class="week-metric-value pending-value">{{ formatAmount(weekData.totalPending) }}</span>
@@ -1025,7 +1025,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
               </div>
 
               <div class="week-metric-item">
-                <div class="week-metric-icon result-icon">ðŸŽ¯</div>
+                <div class="week-metric-icon result-icon">🎯</div>
                 <div class="week-metric-content">
                   <span class="week-metric-label">Result</span>
                   <span class="week-metric-value" :class="weekData.resultAmount >= 0 ? 'income-value' : 'expense-value'">
@@ -1035,7 +1035,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
               </div>
 
               <div class="week-metric-item plan-item">
-                <div class="week-metric-icon plan-icon">ðŸ“Š</div>
+                <div class="week-metric-icon plan-icon">📊</div>
                 <div class="week-metric-content">
                   <span class="week-metric-label">Plan</span>
                   <span class="week-metric-value plan-value">{{ formatAmount(weekData.totalPlan) }}</span>
@@ -1082,7 +1082,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
       <section v-if="rankingMonthMetrics && rankingMonthMetrics.byUser && rankingMonthMetrics.byUser.length > 0" class="dashboard-section">
         <div class="section-header">
           <h2 class="section-title">
-            <span class="title-icon">ðŸ†</span>
+            <span class="title-icon">🏆</span>
             Monthly Member Ranking - {{ formatMonth(selectedMonth) }}
           </h2>
         </div>
@@ -1117,7 +1117,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
         <!-- User Summary Table -->
         <div class="user-summary-section">
           <h3 class="user-summary-title">
-            <span class="summary-icon">ðŸ“Š</span>
+            <span class="summary-icon">📊</span>
             Member Summary
           </h3>
           <div class="user-summary-grid">
@@ -1147,7 +1147,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
               
               <div class="user-metrics-grid">
                 <div class="user-metric-item">
-                  <div class="user-metric-icon income-icon">ðŸ’°</div>
+                  <div class="user-metric-icon income-icon">💰</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Income</span>
                     <span class="user-metric-value income-value">{{ formatAmount(user.income) }}</span>
@@ -1155,7 +1155,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item">
-                  <div class="user-metric-icon expense-icon">ðŸ’¸</div>
+                  <div class="user-metric-icon expense-icon">💸</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Outcome</span>
                     <span class="user-metric-value expense-value">{{ formatAmount(user.outcome) }}</span>
@@ -1163,7 +1163,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item profit-item">
-                  <div class="user-metric-icon profit-icon">ðŸ“ˆ</div>
+                  <div class="user-metric-icon profit-icon">📈</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Profit</span>
                     <span class="user-metric-value profit-value" :class="user.profit >= 0 ? 'income-value' : 'expense-value'">
@@ -1173,7 +1173,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item">
-                  <div class="user-metric-icon pending-icon">â³</div>
+                  <div class="user-metric-icon pending-icon">⏳</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Pending</span>
                     <span class="user-metric-value pending-value">{{ formatAmount(user.pending) }}</span>
@@ -1181,7 +1181,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item">
-                  <div class="user-metric-icon result-icon">ðŸŽ¯</div>
+                  <div class="user-metric-icon result-icon">🎯</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Result</span>
                     <span class="user-metric-value" :class="user.resultAmount >= 0 ? 'income-value' : 'expense-value'">
@@ -1191,7 +1191,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item plan-item">
-                  <div class="user-metric-icon plan-icon">ðŸ“Š</div>
+                  <div class="user-metric-icon plan-icon">📊</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Plan</span>
                     <span class="user-metric-value plan-value">{{ formatAmount(user.plan) }}</span>
@@ -1228,7 +1228,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
       <section v-if="rankingYearMetrics && rankingYearMetrics.byUser && rankingYearMetrics.byUser.length > 0" class="dashboard-section">
         <div class="section-header">
           <h2 class="section-title">
-            <span class="title-icon">ðŸ†</span>
+            <span class="title-icon">🏆</span>
             Annual Member Ranking - {{ selectedMonth.split('-')[0] }}
           </h2>
         </div>
@@ -1263,7 +1263,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
         <!-- User Summary Table -->
         <div class="user-summary-section">
           <h3 class="user-summary-title">
-            <span class="summary-icon">ðŸ“Š</span>
+            <span class="summary-icon">📊</span>
             Member Summary (All Months)
           </h3>
           <div class="user-summary-grid">
@@ -1288,7 +1288,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
               
               <div class="user-metrics-grid">
                 <div class="user-metric-item">
-                  <div class="user-metric-icon income-icon">ðŸ’°</div>
+                  <div class="user-metric-icon income-icon">💰</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Income</span>
                     <span class="user-metric-value income-value">{{ formatAmount(user.income) }}</span>
@@ -1296,7 +1296,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item">
-                  <div class="user-metric-icon expense-icon">ðŸ’¸</div>
+                  <div class="user-metric-icon expense-icon">💸</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Outcome</span>
                     <span class="user-metric-value expense-value">{{ formatAmount(user.outcome) }}</span>
@@ -1304,7 +1304,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item profit-item">
-                  <div class="user-metric-icon profit-icon">ðŸ“ˆ</div>
+                  <div class="user-metric-icon profit-icon">📈</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Profit</span>
                     <span class="user-metric-value profit-value" :class="user.profit >= 0 ? 'income-value' : 'expense-value'">
@@ -1314,7 +1314,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item">
-                  <div class="user-metric-icon pending-icon">â³</div>
+                  <div class="user-metric-icon pending-icon">⏳</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Pending</span>
                     <span class="user-metric-value pending-value">{{ formatAmount(user.pending) }}</span>
@@ -1322,7 +1322,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item">
-                  <div class="user-metric-icon result-icon">ðŸŽ¯</div>
+                  <div class="user-metric-icon result-icon">🎯</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Result</span>
                     <span class="user-metric-value" :class="user.resultAmount >= 0 ? 'income-value' : 'expense-value'">
@@ -1332,7 +1332,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
                 </div>
 
                 <div class="user-metric-item plan-item">
-                  <div class="user-metric-icon plan-icon">ðŸ“Š</div>
+                  <div class="user-metric-icon plan-icon">📊</div>
                   <div class="user-metric-content">
                     <span class="user-metric-label">Plan</span>
                     <span class="user-metric-value plan-value">{{ formatAmount(user.plan) }}</span>
@@ -1378,6 +1378,9 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
   min-height: 100vh;
   background: transparent;
   padding: 0;
+  max-width: min(1400px, 100%);
+  margin: 0 auto;
+  min-width: 0;
 }
 
 .page-header {
@@ -1387,14 +1390,34 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
   margin-bottom: var(--spacing-lg);
   box-shadow: var(--shadow-md);
   border: 1px solid var(--border-light);
+  position: relative;
+  overflow: hidden;
+}
+
+.page-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 50%, var(--color-primary-light) 100%);
+  opacity: 0.9;
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
   gap: var(--spacing-lg);
+  position: relative;
+  z-index: 1;
+}
+
+.header-content > div:first-child {
+  min-width: 0;
+  flex: 1 1 200px;
 }
 
 .page-header h1 {
@@ -1415,22 +1438,37 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
   display: flex;
   gap: var(--spacing-md);
   flex-wrap: wrap;
+  align-items: flex-end;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  flex: 1 1 280px;
+  justify-content: flex-end;
+  max-width: 100%;
 }
 
 .filter-item {
   display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--spacing-xs);
+  min-width: 0;
 }
 
 .filter-label {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .filter-input,
 .filter-select {
+  min-width: 0;
+  width: 100%;
+  max-width: min(220px, 100%);
   padding: var(--spacing-sm) var(--spacing-md);
   border: 1.5px solid var(--border-medium);
   border-radius: var(--radius-md);
@@ -1438,6 +1476,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
   background: var(--bg-primary);
   color: var(--text-primary);
   transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
 }
 
 .filter-input:focus,
@@ -1531,50 +1570,106 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
 
 .groups-summary-section {
   margin-bottom: var(--spacing-lg);
+  background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
 }
 
 .groups-summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   gap: var(--spacing-lg);
+  align-items: stretch;
 }
 
 .group-summary-card {
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
   padding: var(--spacing-lg);
   border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+  position: relative;
+  overflow: hidden;
+}
+
+.group-summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  opacity: 0.95;
+}
+
+.group-summary-card:nth-child(5n + 1)::before {
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
+}
+
+.group-summary-card:nth-child(5n + 2)::before {
+  background: linear-gradient(90deg, var(--color-secondary), #a78bfa);
+}
+
+.group-summary-card:nth-child(5n + 3)::before {
+  background: linear-gradient(90deg, var(--color-info), #60a5fa);
+}
+
+.group-summary-card:nth-child(5n + 4)::before {
+  background: linear-gradient(90deg, var(--color-success), #34d399);
+}
+
+.group-summary-card:nth-child(5n)::before {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.group-summary-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--border-medium);
 }
 
 .group-summary-name {
   margin: 0 0 var(--spacing-md) 0;
   font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-bold);
   color: var(--text-primary);
-  border-bottom: 2px solid var(--border-light);
-  padding-bottom: var(--spacing-sm);
+  letter-spacing: -0.02em;
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .group-summary-metrics {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
 }
 
 .group-metric {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--spacing-md);
   font-size: var(--font-size-sm);
+  padding: var(--spacing-xs) 0;
+  border-bottom: 1px dashed var(--border-light);
+}
+
+.group-metric:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .group-metric-label {
   color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
 }
 
 .group-metric-value {
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .section-header {
@@ -1598,7 +1693,29 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
 }
 
 .title-icon {
-  font-size: var(--font-size-2xl);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  font-size: 1.35rem;
+  line-height: 1;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.14) 0%, rgba(139, 92, 246, 0.12) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.summary-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 1.2rem;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.1));
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
 }
 
 .week-selector {
@@ -1718,11 +1835,22 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
 
   .filters {
     width: 100%;
+    justify-content: stretch;
+    flex: none;
   }
 
   .filter-item {
-    flex: 1;
-    min-width: 150px;
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+
+  .filter-input,
+  .filter-select {
+    max-width: none;
+  }
+
+  .groups-summary-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -2626,15 +2754,11 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
   gap: 12px;
 }
 
-.summary-icon {
-  font-size: 1.75rem;
-}
-
 .user-summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
   gap: 20px;
-  justify-items: center;
+  justify-items: stretch;
 }
 
 .user-summary-card {

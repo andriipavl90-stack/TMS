@@ -104,7 +104,7 @@
       <div class="modal" @click.stop>
         <div class="modal-header">
           <h2>{{ editingUser ? 'Edit User' : 'Create User' }}</h2>
-          <button @click="closeModal" class="close-btn">âœ•</button>
+          <button @click="closeModal" class="close-btn">×</button>
         </div>
         <div class="modal-content">
           <form @submit.prevent="handleSubmit">
@@ -200,7 +200,7 @@
       <div class="modal modal-reset" @click.stop>
         <div class="modal-header">
           <h2>Reset password?</h2>
-          <button type="button" @click="closeResetConfirm" class="close-btn">âœ•</button>
+          <button type="button" @click="closeResetConfirm" class="close-btn">×</button>
         </div>
         <div class="modal-content">
           <p class="reset-modal-text">
@@ -211,7 +211,7 @@
               Cancel
             </button>
             <button type="button" @click="executeResetPassword" class="btn-reset-modal" :disabled="resettingPassword">
-              {{ resettingPassword ? 'Resettingâ€¦' : 'Reset password' }}
+              {{ resettingPassword ? 'Resetting…' : 'Reset password' }}
             </button>
           </div>
         </div>
@@ -223,7 +223,7 @@
       <div class="modal modal-reset" @click.stop>
         <div class="modal-header">
           <h2>Password reset</h2>
-          <button type="button" @click="closeResetSuccess" class="close-btn">âœ•</button>
+          <button type="button" @click="closeResetSuccess" class="close-btn">×</button>
         </div>
         <div class="modal-content">
           <p class="reset-modal-text">
@@ -248,7 +248,7 @@
       <div class="modal modal-reset" @click.stop>
         <div class="modal-header">
           <h2>Reset failed</h2>
-          <button type="button" @click="closeResetError" class="close-btn">âœ•</button>
+          <button type="button" @click="closeResetError" class="close-btn">×</button>
         </div>
         <div class="modal-content">
           <p class="reset-modal-text reset-modal-error">{{ resetErrorMessage }}</p>
@@ -264,7 +264,7 @@
       <div class="modal modal-reset" @click.stop>
         <div class="modal-header">
           <h2>Delete user?</h2>
-          <button type="button" @click="closeDeleteConfirm" class="close-btn">âœ•</button>
+          <button type="button" @click="closeDeleteConfirm" class="close-btn">×</button>
         </div>
         <div class="modal-content">
           <p class="reset-modal-text">
@@ -275,7 +275,7 @@
               Cancel
             </button>
             <button type="button" @click="executeDeleteUser" class="btn-delete-modal" :disabled="deletingUser">
-              {{ deletingUser ? 'Deletingâ€¦' : 'Delete user' }}
+              {{ deletingUser ? 'Deleting…' : 'Delete user' }}
             </button>
           </div>
         </div>
@@ -287,7 +287,7 @@
       <div class="modal modal-reset" @click.stop>
         <div class="modal-header">
           <h2>Delete failed</h2>
-          <button type="button" @click="closeDeleteError" class="close-btn">âœ•</button>
+          <button type="button" @click="closeDeleteError" class="close-btn">×</button>
         </div>
         <div class="modal-content">
           <p class="reset-modal-text reset-modal-error">{{ deleteErrorMessage }}</p>
@@ -303,7 +303,7 @@
       <div class="modal modal-wide" @click.stop>
         <div class="modal-header">
           <h2>Manage Groups</h2>
-          <button @click="closeGroupModal" class="close-btn">âœ•</button>
+          <button @click="closeGroupModal" class="close-btn">×</button>
         </div>
         <div class="modal-content">
           <form @submit.prevent="saveGroup" class="group-form">
@@ -694,7 +694,7 @@ const saveGroup = async () => {
 };
 
 const getGroupLabel = (code) => {
-  if (!code) return 'â€”';
+  if (!code) return '—';
   const g = groups.value.find(x => x.code === code);
   if (g) return g.name;
   if (code === 'SUPER_ADMIN') return 'Super Admin';
