@@ -49,6 +49,7 @@ import { ref, computed, watch } from 'vue';
 import { useFinance } from '../../composables/useFinance';
 import { fetchTransactions } from '../../services/finance';
 import { useAuthStore } from '../../composables/useAuth';
+import { isFinanceManagerUser } from '../../utils/financeAccess';
 
 import FinanceKpiCards from '../finance/FinanceKpiCards.vue';
 import TransactionsTable from '../finance/TransactionsTable.vue';
@@ -88,10 +89,7 @@ const emit = defineEmits(['close']);
 
 const authStore = useAuthStore();
 
-const isBoss = computed(() => {
-  const role = authStore.user?.role;
-  return role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'BOSS';
-});
+const isBoss = computed(() => isFinanceManagerUser(authStore.user));
 
 /* =========================
    FINANCE (ISOLATED)

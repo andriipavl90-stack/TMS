@@ -91,3 +91,26 @@ export const requireRole = (...roles) => {
   };
 };
 
+/** Finance create/update/delete/approve: SUPER_ADMIN, ADMIN/BOSS role, or TEAM_BOSS degree */
+export const requireFinanceManager = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json(createErrorResponse(
+      'AUTH_REQUIRED',
+      'Authentication required'
+    ));
+  }
+  if (req.user.role === 'SUPER_ADMIN') {
+    return next();
+  }
+  if (hasAnyRole(req.user, ['ADMIN', 'BOSS'])) {
+    return next();
+  }
+  if (req.user.degree === 'TEAM_BOSS') {
+    return next();
+  }
+  return res.status(403).json(createErrorResponse(
+    'INSUFFICIENT_PERMISSIONS',
+    'Insufficient permissions'
+  ));
+};
+

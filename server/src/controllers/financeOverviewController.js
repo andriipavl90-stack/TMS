@@ -286,6 +286,7 @@ import Group from '../models/Group.js';
 import mongoose from 'mongoose';
 import { createErrorResponse, createSuccessResponse } from '../utils/errors.js';
 import { validateDateRange } from '../utils/financeHelpers.js';
+import { isCrossTeamFinanceOverviewViewer } from '../utils/financeTeamScope.js';
 
 /* ======================================================
    HELPERS
@@ -363,6 +364,11 @@ export const getFinanceMetrics = async (req, res, next) => {
     const endDate = new Date(end);
     validateDateRange(startDate, endDate);
 
+    const isSuperAdmin = reqUser?.role === 'SUPER_ADMIN';
+    const userGroup = reqUser?.group;
+    const hasRealGroup = userGroup && !['SUPER_ADMIN', 'ADMIN'].includes(userGroup);
+    const crossTeamOverview = isCrossTeamFinanceOverviewViewer(reqUser);
+
     let userObjectId = null;
     if (!isAllMembers) {
       const resolvedUserId = memberId || req.user?._id;
@@ -372,6 +378,16 @@ export const getFinanceMetrics = async (req, res, next) => {
           'User authentication required',
           401
         );
+      }
+      if (!isSuperAdmin && hasRealGroup && !crossTeamOverview) {
+        const target = await User.findById(resolvedUserId).select('group').lean();
+        if (!target || target.group !== userGroup) {
+          throw createErrorResponse(
+            'ACCESS_DENIED',
+            'You can only view finance for your team',
+            403
+          );
+        }
       }
       userObjectId = new mongoose.Types.ObjectId(resolvedUserId);
     }
@@ -386,7 +402,7 @@ export const getFinanceMetrics = async (req, res, next) => {
        - Exclude SUPER_ADMIN from finance
        - Only include users with a valid group (GROUP_1, etc. - not SUPER_ADMIN/ADMIN)
        - Filter by groupId if provided
-       - Non-super-admin: restrict to their group only
+       - Team-scoped users: restrict to their group (not cross-team overview viewers)
     ====================================================== */
 
     const userQuery = { role: { $ne: 'SUPER_ADMIN' } };
@@ -397,21 +413,19 @@ export const getFinanceMetrics = async (req, res, next) => {
     // Only users with a real group (exclude SUPER_ADMIN, ADMIN, null, empty)
     userQuery.group = { $nin: ['SUPER_ADMIN', 'ADMIN', null, ''] };
 
-    // Non-super-admin: can only see their own group
-    const isSuperAdmin = reqUser?.role === 'SUPER_ADMIN';
-    const userGroup = reqUser?.group;
-    const hasRealGroup = userGroup && !['SUPER_ADMIN', 'ADMIN'].includes(userGroup);
-
-    // All groups can VIEW any group's data (read-only). Super admin sees all when groupId=all.
-    if (groupId && groupId !== 'all') {
-      userQuery.group = groupId;
-    } else if (!isSuperAdmin && hasRealGroup) {
+    // Team-only users: locked to their group (ignore forged groupId).
+    // Cross-team overview viewers: all teams, or optional groupId filter.
+    if (!isSuperAdmin && hasRealGroup && !crossTeamOverview) {
       userQuery.group = userGroup;
+    } else if (groupId && groupId !== 'all') {
+      userQuery.group = groupId;
     }
 
     const users = await User.find(userQuery)
       .select('_id name email role group')
       .lean();
+
+    const scopedUserIds = users.map(u => u._id);
 
     /* ======================================================
        LOAD TRANSACTIONS (ONCE)
@@ -422,13 +436,10 @@ export const getFinanceMetrics = async (req, res, next) => {
     };
     if (!isAllMembers) {
       txQuery.userId = userObjectId;
+    } else if (scopedUserIds.length > 0) {
+      txQuery.userId = { $in: scopedUserIds };
     } else {
-      // Exclude transactions from super admin users when fetching all members
-      const superAdminUsers = await User.find({ role: 'SUPER_ADMIN' }).select('_id').lean();
-      const superAdminIds = superAdminUsers.map(u => u._id);
-      if (superAdminIds.length > 0) {
-        txQuery.userId = { $nin: superAdminIds };
-      }
+      txQuery.userId = { $in: [] };
     }
 
     const allTransactions = await FinanceTransaction.find(txQuery).lean();
@@ -450,7 +461,10 @@ export const getFinanceMetrics = async (req, res, next) => {
 
     const yearlyPlans = await MonthlyFinancialPlan.find(
       isAllMembers
-        ? { month: { $regex: `^${year}` } }
+        ? {
+            userId: { $in: scopedUserIds },
+            month: { $regex: `^${year}` }
+          }
         : { userId: userObjectId, month: { $regex: `^${year}` } }
     ).lean();
 
@@ -494,7 +508,7 @@ export const getFinanceMetrics = async (req, res, next) => {
 
     const monthlyPlans = await MonthlyFinancialPlan.find(
       isAllMembers
-        ? { month: monthKey }
+        ? { userId: { $in: scopedUserIds }, month: monthKey }
         : { userId: userObjectId, month: monthKey }
     ).lean();
 
@@ -542,7 +556,7 @@ export const getFinanceMetrics = async (req, res, next) => {
 
     const weeklyPlans = await PeriodicFinancialPlan.find(
       isAllMembers
-        ? { periodId: { $in: periodIds } }
+        ? { userId: { $in: scopedUserIds }, periodId: { $in: periodIds } }
         : { userId: userObjectId, periodId: { $in: periodIds } }
     )
       .populate('periodId')
@@ -604,7 +618,11 @@ export const getFinanceMetrics = async (req, res, next) => {
     ====================================================== */
 
     let byGroupSummary = [];
-    if (isAllMembers && (!groupId || groupId === 'all')) {
+    if (
+      isAllMembers &&
+      (!groupId || groupId === 'all') &&
+      crossTeamOverview
+    ) {
       const allGroupUsers = await User.find({
         role: { $ne: 'SUPER_ADMIN' },
         group: { $nin: ['SUPER_ADMIN', 'ADMIN', null, ''] }

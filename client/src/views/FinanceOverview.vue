@@ -10,8 +10,6 @@ import MiniBarChart from '../components/finance/financeOverview/MiniBarChart.vue
 import FlowerShower from '../components/finance/financeOverview/FlowerShower.vue'
 import { formatMonth } from '../utils/financeHelpers'
 import * as financeService from '../services/finance'
-import { useAuthStore } from '../composables/useAuth'
-import { fetchUsers } from '../services/users'
 import { fetchGroups } from '../services/admin'
 
 /* ===============================
@@ -20,18 +18,15 @@ import { fetchGroups } from '../services/admin'
 const now = new Date()
 const currentMonth = now.toISOString().slice(0, 7)
 const selectedMonth = ref(currentMonth) // YYYY-MM
-const selectedMemberId = ref('all')  // 'all' or userId
 const selectedGroupId = ref('all')   // 'all' or group code (GROUP_1, etc.)
 const selectedWeek = ref('all')
 const loading = ref(false)
 const error = ref(null)
 const metrics = ref(null)
 const rankingMetrics = ref(null) // Separate metrics for ranking sections (always all members)
-const users = ref([])
 const groups = ref([])
 const byGroupSummary = ref([])
 
-const authStore = useAuthStore()
 const monthlyPlans = ref([])
 const periodicPlans = ref([])
 const periods = ref([])
@@ -90,12 +85,12 @@ const loadFinanceOverview = async () => {
   try {
     const { start, end } = getMonthRange(selectedMonth.value)
 
-    // First section (overview) uses selectedMemberId and selectedGroupId to filter
+    // Overview: all members in scope; group filter only via groupId
     const res = await apiClient.get('finance/finance-overview', {
       params: {
         start,
         end,
-        memberId: selectedMemberId.value,
+        memberId: 'all',
         groupId: selectedGroupId.value !== 'all' ? selectedGroupId.value : undefined
       }
     })
@@ -106,10 +101,8 @@ const loadFinanceOverview = async () => {
     console.log('Week Metrics from API:', res.data.data.metrics?.week)
     console.log('Week Metrics length:', res.data.data.metrics?.week?.length)
 
-    // Load monthly plans for overview (respects user selection)
     const monthlyPlansResponse = await financeService.fetchMonthlyPlans({
-      month: selectedMonth.value,
-      userId: selectedMemberId.value === 'all' ? null : (selectedMemberId.value || authStore.user?._id || authStore.user?.id)
+      month: selectedMonth.value
     })
     if (monthlyPlansResponse.ok && monthlyPlansResponse.data) {
       monthlyPlans.value = monthlyPlansResponse.data.plans || []
@@ -130,11 +123,9 @@ const loadFinanceOverview = async () => {
       // Store the full period object, not just the definition
       currentWeekPeriod.value = sortedPeriods.length > 0 ? sortedPeriods[0] : null
       
-      // Load periodic plans for the current week period (respects user selection)
       if (currentWeekPeriod.value) {
         const periodicPlansResponse = await financeService.fetchPeriodicPlans({
-          periodId: currentWeekPeriod.value._id,
-          userId: selectedMemberId.value === 'all' ? null : (selectedMemberId.value || authStore.user?._id || authStore.user?.id)
+          periodId: currentWeekPeriod.value._id
         })
         if (periodicPlansResponse.ok && periodicPlansResponse.data) {
           periodicPlans.value = periodicPlansResponse.data.plans || []
@@ -196,21 +187,6 @@ const loadRankingData = async () => {
     console.error('Failed to load ranking data:', err)
   }
 }
-/////////////////////////////user
-const loadUsers = async () => {
-  try {
-    const res = await fetchUsers();
-    users.value = res?.data?.users || res?.users || [];
-  } catch (err) {
-    if (err.response?.status === 403) {
-      users.value = [];
-      console.warn('User does not have permission to view users');
-    } else {
-      console.error('Failed to load users', err);
-    }
-  }
-};
-
 const loadGroups = async () => {
   try {
     const res = await fetchGroups();
@@ -225,13 +201,12 @@ const loadGroups = async () => {
 ================================ */
 onMounted(async () => {
   await loadGroups()
-  loadUsers()
   loadFinanceOverview()
   loadRankingData()
 })
 
 // Watch filters for overview section
-watch([selectedMonth, selectedMemberId, selectedGroupId], () => {
+watch([selectedMonth, selectedGroupId], () => {
   loadFinanceOverview()
 }, { immediate: false })
 
@@ -411,13 +386,6 @@ const getPerformanceBreakdownData = (metricsData) => {
 // Groups available for filter: super admin sees all + can switch; others see all for summary but detail only own
 const availableGroupsForFilter = computed(() => groups.value)
 
-// Users filtered by selected group (for member dropdown)
-const filteredUsers = computed(() => {
-  const list = users.value || []
-  if (selectedGroupId.value === 'all') return list
-  return list.filter(u => u.group === selectedGroupId.value)
-})
-
 // Ranking metrics (always all members)
 const rankingYearMetrics = computed(() => rankingMetrics.value?.year ?? null)
 const rankingMonthMetrics = computed(() => rankingMetrics.value?.month ?? null)
@@ -505,12 +473,19 @@ const computedMonthMetrics = computed(() => {
   const totalOutcome = total.actualExpense || 0
   const totalProfit = totalIncome - totalOutcome
   const totalPending = total.pendingIncome || 0
-  
-  // Get total monthly plan
-  const totalPlan = monthlyPlans.value.reduce((sum, plan) => {
-    return sum + (plan.monthlyFinancialGoal || 0)
-  }, 0) || total.target || 0
-  
+
+  // Plan total must match the same user scope as income/outcome (team / selected group).
+  // The overview API aggregates `total.target` from monthly plans for those users only.
+  // Summing `monthlyPlans` here was wrong for admins: that list can include every team.
+  const apiMonthTarget = total.target
+  const totalPlan =
+    typeof apiMonthTarget === 'number' && !Number.isNaN(apiMonthTarget)
+      ? apiMonthTarget
+      : monthlyPlans.value.reduce(
+          (sum, plan) => sum + (plan.monthlyFinancialGoal || 0),
+          0
+        )
+
   // Calculate result amount (profit - plan) - positive means ahead, negative means behind
   const resultAmount = totalProfit - totalPlan
   
@@ -707,15 +682,6 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
               <option value="all">All Groups</option>
               <option v-for="g in availableGroupsForFilter" :key="g._id" :value="g.code">
                 {{ g.name }}
-              </option>
-            </select>
-          </label>
-          <label class="filter-item">
-            <span class="filter-label">Member:</span>
-            <select v-model="selectedMemberId" class="filter-select">
-              <option value="all">All Users</option>
-              <option v-for="u in filteredUsers" :key="u.id || u._id" :value="u.id || u._id">
-                {{ u.name || u.email }}
               </option>
             </select>
           </label>

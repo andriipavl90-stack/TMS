@@ -20,6 +20,19 @@
           </option>
         </select>
       </div>
+      <div v-if="showGroupFilter" class="filter-group">
+        <label>Team:</label>
+        <select
+          v-model="selectedGroupId"
+          class="filter-select"
+          @change="onGroupFilterChange"
+        >
+          <option value="all">All teams</option>
+          <option v-for="g in groups" :key="g._id || g.code" :value="g.code">
+            {{ g.name || g.code }}
+          </option>
+        </select>
+      </div>
     </div>
 
     <!-- Loading State -->
@@ -209,16 +222,22 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useFinance } from '../composables/useFinance';
 import { useAuthStore } from '../composables/useAuth';
 import { fetchUsers } from '../services/users';
+import { fetchGroups } from '../services/admin';
 import { excludeSuperAdmin } from '../utils/userFilters';
+import {
+  isFinanceManagerUser,
+  financeUsersListParams,
+  isGlobalFinanceViewerUser,
+} from '../utils/financeAccess';
 import { formatCurrency, formatMonth, getCurrentMonth } from '../utils/financeHelpers';
 import MonthlyPlanDrawer from '../components/finance/MonthlyPlanDrawer.vue';
 import MonthlyPlanModal from '../components/finance/MonthlyPlanModal.vue';
 
 const authStore = useAuthStore();
-const isBoss = computed(() => {
-  const role = authStore.user?.role;
-  return role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'BOSS';
-});
+const isBoss = computed(() => isFinanceManagerUser(authStore.user));
+const showGroupFilter = computed(() => isGlobalFinanceViewerUser(authStore.user));
+const selectedGroupId = ref('all');
+const groups = ref([]);
 
 const {
   monthlyPlans,
@@ -235,6 +254,25 @@ const selectedPlan = ref(null);
 const showModal = ref(false);
 const editingPlan = ref(null);
 const currency = ref('USD');
+
+const buildUserFetchParams = () => {
+  if (showGroupFilter.value) {
+    const p = { limit: 1000 };
+    if (selectedGroupId.value && selectedGroupId.value !== 'all') {
+      p.group = selectedGroupId.value;
+    }
+    return p;
+  }
+  return financeUsersListParams(authStore.user);
+};
+
+const buildMonthlyPlansApiFilters = () => {
+  const f = {};
+  if (showGroupFilter.value && selectedGroupId.value && selectedGroupId.value !== 'all') {
+    f.groupId = selectedGroupId.value;
+  }
+  return f;
+};
 
 /* -------------------- COMPUTED -------------------- */
 
@@ -446,32 +484,41 @@ const closeModal = () => {
 
 const handlePlanSaved = () => {
   closeModal();
-  // Reload all plans to update counts
-  loadMonthlyPlans({});
+  loadMonthlyPlans(buildMonthlyPlansApiFilters());
 };
 
 const handlePlanUpdated = () => {
-  // Reload all plans to update counts
-  loadMonthlyPlans({});
+  loadMonthlyPlans(buildMonthlyPlansApiFilters());
 };
 
 /* -------------------- DATA LOADING -------------------- */
 
-const loadData = async () => {
+const onGroupFilterChange = async () => {
+  await loadData({ refreshUsers: true });
+};
+
+const loadData = async ({ refreshUsers = false } = {}) => {
   try {
-    // Load users
-    const usersResponse = await fetchUsers();
-    if (usersResponse.ok && usersResponse.data) {
-      allUsers.value = excludeSuperAdmin(usersResponse.data.users || []);
-      
-      // Auto-select "All" if none selected
-      if (!selectedUserId.value) {
-        selectAllUsers();
+    if (refreshUsers || allUsers.value.length === 0) {
+      const usersResponse = await fetchUsers(buildUserFetchParams());
+      if (usersResponse.ok && usersResponse.data) {
+        allUsers.value = excludeSuperAdmin(usersResponse.data.users || []);
+        const uid = selectedUserId.value;
+        if (uid && uid !== 'all') {
+          const exists = allUsers.value.some(
+            (u) => (u._id || u.id) === uid
+          );
+          if (!exists) {
+            selectAllUsers();
+          }
+        }
+        if (!selectedUserId.value) {
+          selectAllUsers();
+        }
       }
     }
 
-    // Load ALL monthly plans initially (without user filter) so counts work for all users
-    await loadMonthlyPlans({});
+    await loadMonthlyPlans(buildMonthlyPlansApiFilters());
   } catch (err) {
     console.error('Error loading monthly plans:', err);
   }
@@ -482,8 +529,16 @@ watch(selectedUserId, () => {
   // The computed properties will handle filtering
 });
 
-onMounted(() => {
-  loadData();
+onMounted(async () => {
+  if (showGroupFilter.value) {
+    try {
+      const res = await fetchGroups();
+      groups.value = res?.data?.groups || res?.groups || [];
+    } catch {
+      groups.value = [];
+    }
+  }
+  await loadData({ refreshUsers: true });
 });
 </script>
 

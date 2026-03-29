@@ -1,6 +1,10 @@
 import express from "express";
 import { z } from "zod";
-import { requireAuth, requireRole } from "../middleware/auth.middleware.js";
+import {
+  requireAuth,
+  requireRole,
+  requireFinanceManager,
+} from "../middleware/auth.middleware.js";
 import FinanceTransaction from "../models/FinanceTransaction.js";
 import FinanceGoal from "../models/FinanceGoal.js";
 import Budget from "../models/Budget.js";
@@ -23,6 +27,13 @@ import {
 import dotenv from "dotenv";
 import FinancePeriod from "../models/FinancePeriod.js";
 import * as financeOverviewController from "../controllers/financeOverviewController.js";
+import {
+  resolveFinanceListUserIdFilter,
+  assertTransactionOwnerInFinanceScope,
+  assertUserIdInFinanceScope,
+  getUserIdsInGroup,
+  isGlobalFinanceViewer,
+} from "../utils/financeTeamScope.js";
 dotenv.config();
 
 const OUTCOME_APPROVAL_THRESHOLD = parseFloat(
@@ -138,6 +149,7 @@ router.get("/transactions", async (req, res, next) => {
       category,
       source,
       memberId,
+      groupId,
       from,
       to,
       approvalStatus,
@@ -150,13 +162,40 @@ router.get("/transactions", async (req, res, next) => {
     const user = req.user;
     const query = {};
 
-    // RBAC: Members can only see their own transactions
-    if (normalizeRole(user.role) === ROLES.MEMBER) {
-      query.userId = user._id;
-    } else if (memberId) {
-      // Boss/Admin can filter by member
-      query.userId = memberId;
+    if (
+      groupId &&
+      String(groupId).trim() &&
+      String(groupId).trim() !== "all" &&
+      !isGlobalFinanceViewer(user)
+    ) {
+      return res
+        .status(403)
+        .json(
+          createErrorResponse(
+            "ACCESS_DENIED",
+            "groupId filter is only available to platform administrators",
+            403,
+          ),
+        );
     }
+
+    const userIdFilter = await resolveFinanceListUserIdFilter(
+      user,
+      memberId,
+      groupId,
+    );
+    if (userIdFilter === null) {
+      return res
+        .status(403)
+        .json(
+          createErrorResponse(
+            "ACCESS_DENIED",
+            "You can only view transactions for your team",
+            403,
+          ),
+        );
+    }
+    Object.assign(query, userIdFilter);
 
     if (type) {
       query.type = type;
@@ -249,11 +288,14 @@ router.get("/transactions/:id", async (req, res, next) => {
         .json(createErrorResponse("NOT_FOUND", "Transaction not found", 404));
     }
 
-    // RBAC: Members can only see their own transactions
-    if (
-      normalizeRole(req.user.role) === ROLES.MEMBER &&
-      transaction.userId.toString() !== req.user._id.toString()
-    ) {
+    const ownerId = transaction.userId._id
+      ? transaction.userId._id
+      : transaction.userId;
+    const canView = await assertTransactionOwnerInFinanceScope(
+      req.user,
+      ownerId,
+    );
+    if (!canView) {
       return res
         .status(403)
         .json(
@@ -271,10 +313,10 @@ router.get("/transactions/:id", async (req, res, next) => {
   }
 });
 
-// POST /finance/transactions - Create (boss/superadmin only)
+// POST /finance/transactions - Create (boss / team boss / superadmin)
 router.post(
   "/transactions",
-  requireRole("SUPER_ADMIN", "ADMIN", "BOSS"),
+  requireFinanceManager,
   async (req, res, next) => {
     try {
       const validatedData = transactionSchema.parse(req.body);
@@ -307,17 +349,17 @@ router.post(
       // Determine userId: boss can create for any user, otherwise use own userId
       let targetUserId = req.user._id;
       if (validatedData.userId) {
-        // Boss/admin can create transactions for other users
-        if (
-          req.user.role !== ROLES.SUPER_ADMIN &&
-          !hasAdminPrivileges(req.user)
-        ) {
+        const canSetOtherUser =
+          req.user.role === ROLES.SUPER_ADMIN ||
+          hasAdminPrivileges(req.user) ||
+          req.user.degree === "TEAM_BOSS";
+        if (!canSetOtherUser) {
           return res
             .status(403)
             .json(
               createErrorResponse(
                 "ACCESS_DENIED",
-                "Only boss/superadmin can create transactions for other users",
+                "Only team managers can create transactions for other users",
                 403,
               ),
             );
@@ -479,10 +521,10 @@ router.post(
   },
 );
 
-// PUT /finance/transactions/:id - Update (boss/superadmin only)
+// PUT /finance/transactions/:id - Update (team managers)
 router.put(
   "/transactions/:id",
-  requireRole("SUPER_ADMIN", "ADMIN", "BOSS"),
+  requireFinanceManager,
   async (req, res, next) => {
     try {
       const transaction = await FinanceTransaction.findById(req.params.id);
@@ -604,6 +646,21 @@ router.put(
               ),
             );
         }
+        const allowed = await assertUserIdInFinanceScope(
+          req.user,
+          validatedData.userId,
+        );
+        if (!allowed) {
+          return res
+            .status(403)
+            .json(
+              createErrorResponse(
+                "ACCESS_DENIED",
+                "You can only assign transactions to users in your team",
+                403,
+              ),
+            );
+        }
         transaction.userId = validatedData.userId;
       }
 
@@ -657,7 +714,7 @@ router.put(
 // DELETE /finance/transactions/:id
 router.delete(
   "/transactions/:id",
-  requireRole("SUPER_ADMIN", "ADMIN", "BOSS"),
+  requireFinanceManager,
   async (req, res, next) => {
     try {
       const transaction = await FinanceTransaction.findById(req.params.id);
@@ -668,9 +725,12 @@ router.delete(
           .json(createErrorResponse("NOT_FOUND", "Transaction not found", 404));
       }
 
-      // RBAC: Members can only delete their own transactions
-      if (
+      // RBAC: plain members only delete their own (team bosses handled by group rule below)
+      const isPlainMember =
         normalizeRole(req.user.role) === ROLES.MEMBER &&
+        req.user.degree !== "TEAM_BOSS";
+      if (
+        isPlainMember &&
         transaction.userId.toString() !== req.user._id.toString()
       ) {
         return res
@@ -744,12 +804,11 @@ router.delete(
   },
 );
 
-// POST /finance/transactions/:id/approve - Approve transaction (Boss/Admin only)
+// POST /finance/transactions/:id/approve - Approve transaction (team managers)
 router.post(
   "/transactions/:id/approve",
-  requireRole("SUPER_ADMIN", "ADMIN", "BOSS"),
+  requireFinanceManager,
   async (req, res, next) => {
-    // BOSS for backward compatibility
     try {
       const transaction = await FinanceTransaction.findById(req.params.id);
 
@@ -757,6 +816,22 @@ router.post(
         return res
           .status(404)
           .json(createErrorResponse("NOT_FOUND", "Transaction not found", 404));
+      }
+
+      const canApprove = await assertTransactionOwnerInFinanceScope(
+        req.user,
+        transaction.userId,
+      );
+      if (!canApprove) {
+        return res
+          .status(403)
+          .json(
+            createErrorResponse(
+              "ACCESS_DENIED",
+              "You can only approve transactions for your team",
+              403,
+            ),
+          );
       }
 
       if (transaction.type !== "outcome") {
@@ -824,12 +899,11 @@ router.post(
   },
 );
 
-// POST /finance/transactions/:id/reject - Reject transaction (Boss/Admin only)
+// POST /finance/transactions/:id/reject - Reject transaction (team managers)
 router.post(
   "/transactions/:id/reject",
-  requireRole("SUPER_ADMIN", "ADMIN", "BOSS"),
+  requireFinanceManager,
   async (req, res, next) => {
-    // BOSS for backward compatibility
     try {
       const { reason } = req.body;
       const transaction = await FinanceTransaction.findById(req.params.id);
@@ -838,6 +912,22 @@ router.post(
         return res
           .status(404)
           .json(createErrorResponse("NOT_FOUND", "Transaction not found", 404));
+      }
+
+      const canReject = await assertTransactionOwnerInFinanceScope(
+        req.user,
+        transaction.userId,
+      );
+      if (!canReject) {
+        return res
+          .status(403)
+          .json(
+            createErrorResponse(
+              "ACCESS_DENIED",
+              "You can only reject transactions for your team",
+              403,
+            ),
+          );
       }
 
       if (transaction.approvalStatus !== "pending") {
@@ -1428,12 +1518,11 @@ router.put("/goals", async (req, res, next) => {
   }
 });
 
-// GET /finance/team-summary - Team summary by month (Admin only, privacy-enforced)
+// GET /finance/team-summary - Team summary by month (team managers, privacy-enforced)
 router.get(
   "/team-summary",
-  requireRole("SUPER_ADMIN", "ADMIN", "BOSS"),
+  requireFinanceManager,
   async (req, res, next) => {
-    // BOSS for backward compatibility
     try {
       const { month, currency } = req.query;
 
@@ -1475,6 +1564,12 @@ router.get(
 
       if (currency) {
         query.currency = currency;
+      }
+
+      if (!isGlobalFinanceViewer(req.user)) {
+        const teamIds = await getUserIdsInGroup(req.user.group);
+        query.userId =
+          teamIds.length > 0 ? { $in: teamIds } : req.user._id;
       }
 
       // Aggregate by user (PRIVACY: totals only, no descriptions or details)
@@ -1568,10 +1663,10 @@ const monthlyPlanSchema = z.object({
 
 const updateMonthlyPlanSchema = monthlyPlanSchema.partial();
 
-// POST /finance/monthly-plans - Create monthly plan (boss only)
+// POST /finance/monthly-plans - Create monthly plan (team managers)
 router.post(
   "/monthly-plans",
-  requireRole("SUPER_ADMIN", "ADMIN", "BOSS"),
+  requireFinanceManager,
   async (req, res, next) => {
     try {
       const validatedData = monthlyPlanSchema.parse(req.body);
@@ -1679,10 +1774,10 @@ router.post(
   },
 );
 
-// PUT /finance/monthly-plans/:id - Update monthly plan (boss only)
+// PUT /finance/monthly-plans/:id - Update monthly plan (team managers)
 router.put(
   "/monthly-plans/:id",
-  requireRole("SUPER_ADMIN", "ADMIN", "BOSS"),
+  requireFinanceManager,
   async (req, res, next) => {
     try {
       const plan = await MonthlyFinancialPlan.findById(req.params.id);
@@ -1773,21 +1868,48 @@ router.put(
   },
 );
 
-// GET /finance/monthly-plans - List monthly plans (all users, read-only)
+// GET /finance/monthly-plans - List monthly plans (team-scoped)
 router.get("/monthly-plans", async (req, res, next) => {
   try {
-    const { userId, month } = req.query;
+    const { userId, month, groupId } = req.query;
     const user = req.user;
 
     const query = {};
 
-    // RBAC: Members can only see their own plans
-    if (normalizeRole(user.role) === ROLES.MEMBER) {
-      query.userId = user._id;
-    } else if (userId) {
-      // Boss/Admin can filter by user
-      query.userId = userId;
+    if (
+      groupId &&
+      String(groupId).trim() &&
+      String(groupId).trim() !== "all" &&
+      !isGlobalFinanceViewer(user)
+    ) {
+      return res
+        .status(403)
+        .json(
+          createErrorResponse(
+            "ACCESS_DENIED",
+            "groupId filter is only available to platform administrators",
+            403,
+          ),
+        );
     }
+
+    const userIdFilter = await resolveFinanceListUserIdFilter(
+      user,
+      userId,
+      groupId,
+    );
+    if (userIdFilter === null) {
+      return res
+        .status(403)
+        .json(
+          createErrorResponse(
+            "ACCESS_DENIED",
+            "You can only view plans for your team",
+            403,
+          ),
+        );
+    }
+    Object.assign(query, userIdFilter);
 
     if (month) {
       if (!/^\d{4}-\d{2}$/.test(month)) {
@@ -1835,11 +1957,14 @@ router.get("/monthly-plans/:id", async (req, res, next) => {
         );
     }
 
-    // RBAC: Members can only see their own plans
-    if (
-      normalizeRole(req.user.role) === ROLES.MEMBER &&
-      plan.userId.toString() !== req.user._id.toString()
-    ) {
+    const planOwnerId = plan.userId._id
+      ? plan.userId._id
+      : plan.userId;
+    const canView = await assertTransactionOwnerInFinanceScope(
+      req.user,
+      planOwnerId,
+    );
+    if (!canView) {
       return res
         .status(403)
         .json(
@@ -2398,7 +2523,7 @@ const updatePeriodicPlanSchema = z.object({
 });
 router.post(
   '/periodic-plans',
-  requireRole('SUPER_ADMIN', 'ADMIN', 'BOSS'),
+  requireFinanceManager,
   async (req, res, next) => {
     try {
       const data = assignPeriodicPlanSchema.parse(req.body);
@@ -2482,7 +2607,7 @@ router.post(
 );
 router.put(
   '/periodic-plans/:id',
-  requireRole('SUPER_ADMIN', 'ADMIN', 'BOSS'),
+  requireFinanceManager,
   async (req, res, next) => {
     try {
       const data = updatePeriodicPlanSchema.parse(req.body);
@@ -2578,15 +2703,39 @@ router.put(
 );
 router.get('/periodic-plans', async (req, res, next) => {
   try {
-    const { userId, periodId } = req.query;
+    const { userId, periodId, groupId } = req.query;
     const query = {};
 
-    // RBAC
-    if (normalizeRole(req.user.role) === ROLES.MEMBER) {
-      query.userId = req.user._id;
-    } else if (userId) {
-      query.userId = userId;
+    if (
+      groupId &&
+      String(groupId).trim() &&
+      String(groupId).trim() !== "all" &&
+      !isGlobalFinanceViewer(req.user)
+    ) {
+      return res.status(403).json(
+        createErrorResponse(
+          "ACCESS_DENIED",
+          "groupId filter is only available to platform administrators",
+          403,
+        ),
+      );
     }
+
+    const userIdFilter = await resolveFinanceListUserIdFilter(
+      req.user,
+      userId,
+      groupId,
+    );
+    if (userIdFilter === null) {
+      return res.status(403).json(
+        createErrorResponse(
+          'ACCESS_DENIED',
+          'You can only view plans for your team',
+          403
+        )
+      );
+    }
+    Object.assign(query, userIdFilter);
 
     if (periodId) {
       query.periodId = periodId;

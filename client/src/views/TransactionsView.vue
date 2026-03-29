@@ -74,6 +74,19 @@
           class="filter-input"
         />
       </div>
+      <div v-if="showGroupFilter" class="filter-group">
+        <label>Team:</label>
+        <select
+          v-model="selectedGroupId"
+          @change="onGroupFilterChange"
+          class="filter-select"
+        >
+          <option value="all">All teams</option>
+          <option v-for="g in groups" :key="g._id || g.code" :value="g.code">
+            {{ g.name || g.code }}
+          </option>
+        </select>
+      </div>
     </div>
 
     <!-- Loading State -->
@@ -185,15 +198,21 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useFinance } from '../composables/useFinance';
 import { useAuthStore } from '../composables/useAuth';
 import { fetchUsers } from '../services/users';
+import { fetchGroups } from '../services/admin';
 import { excludeSuperAdmin } from '../utils/userFilters';
+import {
+  isFinanceManagerUser,
+  financeUsersListParams,
+  isGlobalFinanceViewerUser,
+} from '../utils/financeAccess';
 import TransactionsTable from '../components/finance/TransactionsTable.vue';
 import TransactionModal from '../components/finance/TransactionModal.vue';
 
 const authStore = useAuthStore();
-const isBoss = computed(() => {
-  const role = authStore.user?.role;
-  return role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'BOSS';
-});
+const isBoss = computed(() => isFinanceManagerUser(authStore.user));
+const showGroupFilter = computed(() => isGlobalFinanceViewerUser(authStore.user));
+const selectedGroupId = ref('all');
+const groups = ref([]);
 
 const {
   transactions,
@@ -230,6 +249,54 @@ const showModal = ref(false);
 const editingTransaction = ref(null);
 const allTransactionsForCounts = ref([]); // Store all transactions for counting
 let debounceTimer = null;
+
+const buildUserFetchParams = () => {
+  if (showGroupFilter.value) {
+    const p = { limit: 1000 };
+    if (selectedGroupId.value && selectedGroupId.value !== 'all') {
+      p.group = selectedGroupId.value;
+    }
+    return p;
+  }
+  return financeUsersListParams(authStore.user);
+};
+
+const appendTransactionGroupFilter = (query) => {
+  if (
+    showGroupFilter.value &&
+    selectedGroupId.value &&
+    selectedGroupId.value !== 'all'
+  ) {
+    query.groupId = selectedGroupId.value;
+  }
+};
+
+const syncUserSelection = () => {
+  if (!selectedUserId.value || !allUsers.value.length) {
+    if (allUsers.value.length > 0) {
+      const first = allUsers.value[0];
+      selectedUserId.value = first._id || first.id;
+      selectedUser.value = first;
+    } else {
+      selectedUserId.value = '';
+      selectedUser.value = null;
+    }
+    return;
+  }
+  const exists = allUsers.value.some(
+    (u) => (u._id || u.id) === selectedUserId.value
+  );
+  if (!exists) {
+    if (allUsers.value.length > 0) {
+      const first = allUsers.value[0];
+      selectedUserId.value = first._id || first.id;
+      selectedUser.value = first;
+    } else {
+      selectedUserId.value = '';
+      selectedUser.value = null;
+    }
+  }
+};
 
 /* -------------------- COMPUTED -------------------- */
 
@@ -311,10 +378,14 @@ const selectUser = (user) => {
 const debounceLoad = () => {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
-    // Reload counts when filters change
     loadAllTransactionsForCounts();
     loadData();
   }, 500);
+};
+
+const onGroupFilterChange = async () => {
+  filters.value.page = 1;
+  await loadData({ refreshUsers: true });
 };
 
 const openCreateModal = () => {
@@ -369,41 +440,33 @@ const changePage = (page) => {
 
 /* -------------------- DATA LOADING -------------------- */
 
-const loadData = async () => {
+const loadUsers = async () => {
+  const usersResponse = await fetchUsers(buildUserFetchParams());
+  if (usersResponse.ok && usersResponse.data) {
+    allUsers.value = excludeSuperAdmin(usersResponse.data.users || []);
+    syncUserSelection();
+  }
+};
+
+const loadData = async ({ refreshUsers = false } = {}) => {
   try {
-    // Load users first if not already loaded
-    if (allUsers.value.length === 0) {
-      const usersResponse = await fetchUsers();
-      if (usersResponse.ok && usersResponse.data) {
-        allUsers.value = excludeSuperAdmin(usersResponse.data.users || []);
-        
-        // Auto-select first user if none selected
-        if (!selectedUserId.value && allUsers.value.length > 0) {
-          const userId = allUsers.value[0]._id || allUsers.value[0].id;
-          selectedUserId.value = userId;
-          selectedUser.value = allUsers.value[0];
-          filters.value.page = 1;
-        }
-      }
+    if (refreshUsers || allUsers.value.length === 0) {
+      await loadUsers();
     }
 
-    // Load ALL transactions initially (without memberId filter) so counts work for all users
-    // This is similar to how MonthlyPlansView loads all plans first
     await loadAllTransactionsForCounts();
 
-    // Build query filters for selected user's transactions (for display)
     const queryFilters = { ...filters.value };
-    
-    // Always filter by selected user for display
+
     if (selectedUserId.value) {
       queryFilters.memberId = selectedUserId.value;
     } else {
-      // If no user selected, don't load transactions for display
       return;
     }
 
+    appendTransactionGroupFilter(queryFilters);
+
     if (!queryFilters.from && !queryFilters.to) {
-      // Default to current month if no date range
       const now = new Date("01/01/2017");
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -413,8 +476,10 @@ const loadData = async () => {
     }
 
     const response = await loadTransactions(queryFilters);
-    
-    if (response?.data?.pagination) {
+
+    if (response?.pagination) {
+      pagination.value = response.pagination;
+    } else if (response?.data?.pagination) {
       pagination.value = response.data.pagination;
     }
   } catch (err) {
@@ -439,6 +504,8 @@ const loadAllTransactionsForCounts = async () => {
         delete countFilters[key];
       }
     });
+
+    appendTransactionGroupFilter(countFilters);
 
     // Ensure date range is set for counts
     if (!countFilters.from && !countFilters.to) {
@@ -484,8 +551,16 @@ watch([() => filters.value.from, () => filters.value.to, () => filters.value.typ
   loadAllTransactionsForCounts();
 });
 
-onMounted(() => {
-  loadData();
+onMounted(async () => {
+  if (showGroupFilter.value) {
+    try {
+      const res = await fetchGroups();
+      groups.value = res?.data?.groups || res?.groups || [];
+    } catch {
+      groups.value = [];
+    }
+  }
+  await loadData({ refreshUsers: true });
 });
 </script>
 

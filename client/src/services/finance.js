@@ -33,6 +33,7 @@ export const getFinanceOverview = ({ start, end, memberId, groupId }) => {
  * @param {string} [filters.category]
  * @param {string} [filters.source]
  * @param {string} [filters.memberId] - Admin only
+ * @param {string} [filters.groupId] - SUPER_ADMIN / platform admin: limit to users in this group code
  * @param {string} [filters.from] - ISO 8601
  * @param {string} [filters.to] - ISO 8601
  * @param {'not_required'|'pending'|'approved'|'rejected'} [filters.approvalStatus]
@@ -49,6 +50,7 @@ export const fetchTransactions = async (filters = {}) => {
   if (filters.category) params.append('category', filters.category);
   if (filters.source) params.append('source', filters.source);
   if (filters.memberId) params.append('memberId', filters.memberId);
+  if (filters.groupId) params.append('groupId', filters.groupId);
   if (filters.from) params.append('from', filters.from);
   if (filters.to) params.append('to', filters.to);
   if (filters.approvalStatus) params.append('approvalStatus', filters.approvalStatus);
@@ -146,12 +148,14 @@ export const rejectTransaction = async (id, reason = '') => {
  * @param {Object} filters
  * @param {string} [filters.userId] - Admin can filter
  * @param {string} [filters.month] - YYYY-MM format
+ * @param {string} [filters.groupId] - SUPER_ADMIN / meta admin: limit to team code
  * @returns {Promise<ApiResponse>} { ok: true, data: { plans: MonthlyFinancialPlan[] } }
  */
 export const fetchMonthlyPlans = async (filters = {}) => {
   const params = new URLSearchParams();
   if (filters.userId) params.append('userId', filters.userId);
   if (filters.month) params.append('month', filters.month);
+  if (filters.groupId) params.append('groupId', filters.groupId);
 
   const response = await apiClient.get(`/finance/monthly-plans?${params.toString()}`);
   return response.data;
@@ -203,12 +207,14 @@ export const updateMonthlyPlan = async (id, planData) => {
  * @param {Object} filters
  * @param {string} [filters.userId]   - Optional user filter
  * @param {string} [filters.periodId] - Optional period filter
+ * @param {string} [filters.groupId]  - SUPER_ADMIN / meta admin: limit to team code
  * @returns {Promise<ApiResponse>} { ok: true, data: { plans: PeriodicFinancialPlan[] } }
  */
 export const fetchPeriodicPlans = async (filters = {}) => {
   const params = new URLSearchParams();
   if (filters.userId) params.append('userId', filters.userId);
   if (filters.periodId) params.append('periodId', filters.periodId);
+  if (filters.groupId) params.append('groupId', filters.groupId);
 
   const response = await apiClient.get(
     `/finance/periodic-plans?${params.toString()}`

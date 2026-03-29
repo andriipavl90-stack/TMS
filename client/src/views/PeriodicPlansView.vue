@@ -18,11 +18,28 @@
                 <label>Month:</label>
                 <input v-model="selectedMonth" type="month" class="filter-input" @change="loadData" />
             </div>
+            <div v-if="showGroupFilter" class="filter-group">
+                <label>Team:</label>
+                <select
+                    v-model="selectedGroupId"
+                    class="filter-select"
+                    @change="onGroupFilterChange"
+                >
+                    <option value="all">All teams</option>
+                    <option v-for="g in groups" :key="g._id || g.code" :value="g.code">
+                        {{ g.name || g.code }}
+                    </option>
+                </select>
+            </div>
             <div class="filter-group">
                 <label>User:</label>
                 <select v-model="selectedUserId" class="filter-select" @change="loadData">
                     <option value="">All Users</option>
-                    <option v-for="user in allUsers" :key="user.id" :value="user.id">
+                    <option
+                        v-for="user in allUsers"
+                        :key="user._id || user.id"
+                        :value="user._id || user.id"
+                    >
                         {{ user.name || user.email }}
                     </option>
                 </select>
@@ -218,7 +235,13 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useFinance } from '../composables/useFinance';
 import { useAuthStore } from '../composables/useAuth';
 import { fetchUsers } from '../services/users';
+import { fetchGroups } from '../services/admin';
 import { excludeSuperAdmin } from '../utils/userFilters';
+import {
+    isFinanceManagerUser,
+    financeUsersListParams,
+    isGlobalFinanceViewerUser,
+} from '../utils/financeAccess';
 import {
     formatCurrency,
     formatDate,
@@ -232,10 +255,10 @@ import EditPeriodModal from '../components/finance/EditPeriodModal.vue';
 
 const authStore = useAuthStore();
 
-const isBoss = computed(() => {
-    const role = authStore.user?.role;
-    return ['SUPER_ADMIN', 'ADMIN', 'BOSS'].includes(role);
-});
+const isBoss = computed(() => isFinanceManagerUser(authStore.user));
+const showGroupFilter = computed(() => isGlobalFinanceViewerUser(authStore.user));
+const selectedGroupId = ref('all');
+const groups = ref([]);
 
 const {
     periodicPlans,
@@ -263,6 +286,29 @@ const showEditPeriodModal = ref(false);
 const editingPeriod = ref(null);
 const showPlanModal = ref(false);
 const editingPlan = ref(null);
+
+const buildUserFetchParams = () => {
+    if (showGroupFilter.value) {
+        const p = { limit: 1000 };
+        if (selectedGroupId.value && selectedGroupId.value !== 'all') {
+            p.group = selectedGroupId.value;
+        }
+        return p;
+    }
+    return financeUsersListParams(authStore.user);
+};
+
+/** Query for periodic plans + transaction rollups (group / user scope) */
+const buildPeriodicAndTxFilters = () => {
+    const f = {};
+    if (showGroupFilter.value && selectedGroupId.value && selectedGroupId.value !== 'all') {
+        f.groupId = selectedGroupId.value;
+    }
+    if (selectedUserId.value) {
+        f.userId = selectedUserId.value;
+    }
+    return f;
+};
 
 /* -------------------- COMPUTED -------------------- */
 
@@ -441,15 +487,13 @@ const closePlanModal = () => {
 
 const handlePlanSaved = async () => {
     closePlanModal();
-    // Reload all plans to update counts
     try {
-        const response = await fetchPeriodicPlans({});
+        const response = await fetchPeriodicPlans(buildPeriodicAndTxFilters());
         if (response.ok) {
             periodicPlans.value = response.data?.plans || response.data?.periodicPlans || [];
         }
     } catch (err) {
         console.error('Error reloading plans:', err);
-        // Still reload all data as fallback
         loadData();
     }
 };
@@ -467,18 +511,33 @@ const handlePeriodUpdated = () => {
 
 /* -------------------- DATA LOADING -------------------- */
 
-const loadData = async () => {
+const onGroupFilterChange = async () => {
+    await loadData({ refreshUsers: true });
+};
+
+const loadData = async ({ refreshUsers = false } = {}) => {
     try {
-        const usersRes = await fetchUsers();
-        if (usersRes.ok) {
-            allUsers.value = excludeSuperAdmin(usersRes.data.users || []);
+        if (refreshUsers || allUsers.value.length === 0) {
+            const usersRes = await fetchUsers(buildUserFetchParams());
+            if (usersRes.ok) {
+                allUsers.value = excludeSuperAdmin(usersRes.data.users || []);
+                if (selectedUserId.value) {
+                    const uid = selectedUserId.value;
+                    const exists = allUsers.value.some(
+                        (u) => (u._id || u.id) === uid
+                    );
+                    if (!exists) {
+                        selectedUserId.value = '';
+                    }
+                }
+            }
         }
 
         const res = await loadPeriods();
         periods.value = res.periods || [];
 
-        // Load ALL periodic plans initially (without user filter) so counts work for all periods
-        const response = await fetchPeriodicPlans({});
+        const scope = buildPeriodicAndTxFilters();
+        const response = await fetchPeriodicPlans(scope);
         if (response.ok) {
             periodicPlans.value = response.data?.plans || response.data?.periodicPlans || [];
         } else {
@@ -490,13 +549,19 @@ const loadData = async () => {
             const start = new Date(y, m - 1, 1);
             const end = new Date(y, m, 0, 23, 59, 59, 999);
 
-            await loadTransactions({
+            const txFilters = {
                 from: start.toISOString(),
-                to: end.toISOString()
-            });
+                to: end.toISOString(),
+            };
+            if (scope.groupId) {
+                txFilters.groupId = scope.groupId;
+            }
+            if (scope.userId) {
+                txFilters.memberId = scope.userId;
+            }
+            await loadTransactions(txFilters);
         }
 
-        // Auto-select first period if none selected
         if (!selectedPeriodId.value && filteredPeriods.value.length > 0) {
             selectPeriod(filteredPeriods.value[0]);
         }
@@ -512,8 +577,16 @@ watch([selectedMonth], () => {
     selectedPeriod.value = null;
 });
 
-onMounted(() => {
-    loadData();
+onMounted(async () => {
+    if (showGroupFilter.value) {
+        try {
+            const res = await fetchGroups();
+            groups.value = res?.data?.groups || res?.groups || [];
+        } catch {
+            groups.value = [];
+        }
+    }
+    await loadData({ refreshUsers: true });
 });
 </script>
 
