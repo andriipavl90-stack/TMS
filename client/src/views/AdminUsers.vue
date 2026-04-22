@@ -36,6 +36,7 @@
           <tr>
             <th>User</th>
             <th>Email</th>
+            <th>Hubstaff ID</th>
             <th>Group</th>
             <th>Degree</th>
             <th>Role</th>
@@ -49,6 +50,10 @@
           <tr v-for="user in users" :key="user.id">
             <td>{{ user.name }}</td>
             <td>{{ user.email }}</td>
+            <td>
+              <span v-if="user.hubstaff_id" class="hubstaff-id">{{ user.hubstaff_id }}</span>
+              <span v-else class="hubstaff-id hubstaff-id--empty">—</span>
+            </td>
             <td>{{ getGroupLabel(user.group) }}</td>
             <td>
               {{
@@ -116,6 +121,15 @@
             <div class="form-group">
               <label>Name *</label>
               <input v-model="form.name" type="text" required placeholder="Full Name" />
+            </div>
+            <div class="form-group">
+              <label>Hubstaff ID</label>
+              <input
+                v-model="form.hubstaff_id"
+                type="text"
+                placeholder="e.g. 1234567 (leave blank if none)"
+              />
+              <small class="form-hint">Numeric Hubstaff user_id used to link time tracking data.</small>
             </div>
             <!-- add group and member degree -->
             <div class="form-row">
@@ -425,7 +439,8 @@ const form = ref({
   member: 'MEMBER',
   role: 'MEMBER',
   status: 'active',
-  editor: false
+  editor: false,
+  hubstaff_id: ''
 });
 
 const loadGroups = async () => {
@@ -464,7 +479,8 @@ const openCreateModal = () => {
     degree: 'MEMBER',
     role: 'MEMBER',
     status: 'active',
-    editor: false
+    editor: false,
+    hubstaff_id: ''
   };
   tempPassword.value = '';
   createTempPasswordCopied.value = false;
@@ -480,7 +496,8 @@ const openEditModal = (user) => {
     degree: user.degree,
     role: user.role,
     status: user.status,
-    editor: user.editor || false
+    editor: user.editor || false,
+    hubstaff_id: user.hubstaff_id ?? ''
   };
   tempPassword.value = '';
   createTempPasswordCopied.value = false;
@@ -500,12 +517,14 @@ const handleSubmit = async () => {
   try {
     if (editingUser.value) {
       // Update user
+      const trimmedHubstaffId = (form.value.hubstaff_id ?? '').toString().trim();
       const response = await adminService.updateUser(editingUser.value.id, {
         group: form.value?.group,
         degree: form.value?.degree,
         role: form.value.role,
         status: form.value.status,
-        editor: form.value.editor
+        editor: form.value.editor,
+        hubstaff_id: trimmedHubstaffId === '' ? null : trimmedHubstaffId
       });
       if (response.ok) {
         await loadUsers();

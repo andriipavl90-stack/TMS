@@ -39,7 +39,7 @@
           @click="filters.group = g.code"
         >
           {{ g.name.replace(/Group\s*/i, 'G') || g.code.replace('GROUP_', 'G') }}
-          <span v-if="getFilteredCountForGroup(g.code)">â—</span>
+          <span v-if="getFilteredCountForGroup(g.code)">●</span>
         </button>
       </div>
       <div class="filter-3group">
@@ -73,7 +73,7 @@
             <td><b>{{ (item.username) }}</b></td>
             <!-- <td>{{ getAbbreviations(item) }}</td> -->
             <td :style="{ color: STATE_LABELS[item.state]?.color || '#6b7280' }">
-              {{ STATE_LABELS[item.state]?.text || 'â€”' }}
+              {{ STATE_LABELS[item.state]?.text || '—' }}
             </td>
           </tr>
 
@@ -108,8 +108,11 @@ const loadingStats = ref(false);
 const stats = ref([]);
 const s_reportId = ref('');
 const STATE_LABELS = {
+  1: { text: 'Draft',    color: '#9ca3af' },
+  2: { text: 'Pending',  color: '#2563eb' },
+  3: { text: 'Rejected', color: '#dc2626' },
   4: { text: 'Rejected', color: '#dc2626' },
-  5: { text: 'Awaiting', color: '#2563eb' },
+  5: { text: 'Awaiting', color: '#f59e0b' },
   6: { text: 'Approved', color: '#16a34a' }
 }
 
@@ -146,7 +149,7 @@ const getFilteredCountForGroup = (code) => {
     to.setHours(23, 59, 59, 999);
     const st = item.state;
     const grp = item.group;
-    const inDateRange = itemDate >= from && itemDate <= to && st >= 5 && st < 6;
+    const inDateRange = itemDate >= from && itemDate <= to && st >= 1;
     const matchesGroup = grp === code;
     return inDateRange && matchesGroup;
   }).length;
@@ -197,7 +200,7 @@ const filteredData = computed(() => {
     const st = item.state;
     const grp = item.group;
 
-    const inDateRange = itemDate >= from && itemDate <= to && st > 4;
+    const inDateRange = itemDate >= from && itemDate <= to && st >= 1;
 
     let combinedNotes = '';
     if (item.sections?.length) {

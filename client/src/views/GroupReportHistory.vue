@@ -3,6 +3,14 @@
 
     <!-- LEFT FILTER PANEL -->
     <div class="filters-section">
+      <div class="filter-group">
+        <label>Group</label>
+        <select v-model="selectedGroup" class="filter-input">
+          <option value="">— All Groups —</option>
+          <option v-for="g in groups" :key="g.code" :value="g.code">{{ g.name }}</option>
+        </select>
+      </div>
+
       <div class="filter-2group">
         <div class="filter-group">
           <label>Date From</label>
@@ -12,15 +20,6 @@
             class="filter-input"
           />
         </div>
-
-        <!-- <div class="filter-group">
-          <label>Date To</label>
-          <input
-            v-model="filters.to"
-            type="date"
-            class="filter-input"
-          />
-        </div> -->
       </div>
 
       <div class="filter-3group">
@@ -54,7 +53,7 @@
             <td><b>{{ (item.username) }}</b></td>
             <!-- <td>{{ getAbbreviations(item) }}</td> -->
             <td :style="{ color: STATE_LABELS[item.state]?.color || '#6b7280' }">
-              {{ STATE_LABELS[item.state]?.text || 'â€”' }}
+              {{ STATE_LABELS[item.state]?.text || '—' }}
             </td>
           </tr>
 
@@ -78,7 +77,8 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import DailyReportView from './DailyReportView_BossChild.vue'
 import { useAuthStore } from '../composables/useAuth';
-import { getDailys, getTeam } from '../services/daily.js';
+import { getDailys, getTeam, getAll } from '../services/daily.js';
+import { fetchGroups } from '../services/admin.js';
 import { useToast } from 'vue-toastification';
 
 const toast = useToast();
@@ -86,7 +86,10 @@ const authStore = useAuthStore();
 const loadingStats = ref(false);
 const stats = ref([]);
 const s_reportId = ref('');
+const groups = ref([]);
+const selectedGroup = ref('');
 const STATE_LABELS = {
+  1: { text: 'Draft', color: '#9ca3af' },
   2: { text: 'Pending', color: '#2563eb' },
   3: { text: 'Rejected', color: '#dc2626' },
   4: { text: 'Rejected', color: '#dc2626' },
@@ -96,21 +99,29 @@ const STATE_LABELS = {
 
 const loadStats = async () => {
   loadingStats.value = true;
+  s_reportId.value = '';
   try {
-
-    const response = await getTeam(authStore.user.group);
-
+    const response = await getAll();
     if (response.data) {
-      stats.value = response.data;    
+      stats.value = response.data;
     }
   } catch (err) {
     console.error('Error loading stats:', err);
-    toast.error('Failed to load database statistics');
+    toast.error('Failed to load reports');
   } finally {
     loadingStats.value = false;
   }
 };
-onMounted(() => {
+
+onMounted(async () => {
+  try {
+    const data = await fetchGroups();
+    groups.value = data?.data?.groups || data?.groups || [];
+  } catch {
+    groups.value = [];
+  }
+  // Everyone starts with all groups visible (can filter down)
+  selectedGroup.value = '';
   loadStats();
 });
 
@@ -150,7 +161,7 @@ const filteredData = computed(() => {
     const to = new Date(filters.value.from);
     to.setHours(23, 59, 59, 999);
 
-    const inDateRange = itemDate >= from && itemDate <= to && item.state > 1;
+    const inDateRange = itemDate >= from && itemDate <= to && item.state >= 1;
 
     let combinedNotes = '';
     if (item.sections?.length) {
@@ -164,7 +175,9 @@ const filteredData = computed(() => {
       !filters.value.content.trim() ||
       combinedNotes.includes(filters.value.content.toLowerCase());
 
-    return inDateRange && matchesContent;
+    const matchesGroup = !selectedGroup.value || item.group === selectedGroup.value;
+
+    return inDateRange && matchesContent && matchesGroup;
   });
 });
 

@@ -1344,7 +1344,7 @@ watch([computedMonthMetrics, computedWeekMetrics], ([monthMetrics, weekMetrics],
   min-height: 100vh;
   background: transparent;
   padding: 0;
-  max-width: min(1400px, 100%);
+  max-width: min(1600px, 100%);
   margin: 0 auto;
   min-width: 0;
 }

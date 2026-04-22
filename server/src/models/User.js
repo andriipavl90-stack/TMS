@@ -36,6 +36,13 @@ const userSchema = new mongoose.Schema({
     default: 'MEMBER',
     required: true
   },
+  // Hubstaff numeric user_id — links this user to Hubstaff API activity/time data
+  hubstaff_id: {
+    type: String,
+    default: null,
+    index: true,
+    sparse: true,
+  },
   editor: {
     type: Boolean,
     default: false
@@ -86,6 +93,7 @@ userSchema.methods.toSummary = function() {
     role: this.role,
     editor: this.editor,
     status: this.status,
+    hubstaff_id: this.hubstaff_id || null,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt
   };

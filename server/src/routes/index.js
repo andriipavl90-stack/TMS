@@ -22,6 +22,9 @@ import taskRoutes from './task.routes.js';
 import uploadRoutes from './upload.routes.js';
 
 import dailyRoutes from './daily.router.js'
+import hubstaffRoutes from './hubstaff.routes.js'
+import timeEntryRoutes from './timeEntry.routes.js'
+import workflowRoutes from './workflow.routes.js'
 
 const router = express.Router();
 
@@ -66,6 +69,9 @@ router.use('/finance', financeRoutes); // Finance routes
 router.use('/projects', projectRoutes); // Project routes
 router.use('/projects', taskRoutes); // Task routes (nested under /projects/:projectId/tasks)
 router.use('/upload', uploadRoutes); // Legacy upload routes (kept for backward compatibility)
+router.use('/hubstaff', hubstaffRoutes); // Hubstaff time & activity tracking
+router.use('/time-entries', timeEntryRoutes); // In-app time tracking
+router.use('/workflow', workflowRoutes); // Workflow analytics + manual time
 
 export default router;
 

@@ -65,7 +65,7 @@
 <script setup>
 import { ref, onMounted, nextTick, computed, watch } from 'vue';
 import { useAuthStore } from '../composables/useAuth';
-import { updateDaily, getTeam } from '../services/daily';
+import { updateDaily, getAll } from '../services/daily';
 import { useToast } from 'vue-toastification';
 import ReportSectionCard from '../components/reports/ReportSectionCard.vue';
 
@@ -109,7 +109,7 @@ function removeSection(title) {
 
 async function loadReport() {
   try {
-    const response = await getTeam(authStore.user.group);
+    const response = await getAll();
     if (!response.data) return;
 
     let item = null;

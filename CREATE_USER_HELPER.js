@@ -8,14 +8,14 @@
 
 async function createUser(email, name, role = 'MEMBER', status = 'active', editor = false) {
   const token = localStorage.getItem('token');
-  
+
   if (!token) {
     console.error('❌ Not logged in. Please log in first.');
     return;
   }
 
   try {
-    const response = await fetch('http://localhost:3002/api/admin/users', {
+    const response = await fetch('http://localhost:3003/api/admin/users', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -31,7 +31,7 @@ async function createUser(email, name, role = 'MEMBER', status = 'active', edito
     });
 
     const data = await response.json();
-    
+
     if (data.ok) {
       console.log('✅ User created successfully!');
       console.log('📧 Email:', data.data.user.email);

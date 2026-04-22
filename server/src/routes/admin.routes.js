@@ -118,6 +118,15 @@ const getValidGroupValues = async () => {
   return ['SUPER_ADMIN', 'ADMIN', ...codes];
 };
 
+const hubstaffIdField = z
+  .union([z.string(), z.number(), z.null()])
+  .optional()
+  .transform((v) => {
+    if (v === null || v === undefined) return null;
+    const s = String(v).trim();
+    return s === '' ? null : s;
+  });
+
 const createUserSchema = z.object({
   email: z.string().email('Invalid email format'),
   name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name too long'),
@@ -125,7 +134,8 @@ const createUserSchema = z.object({
   degree: z.enum(['SUPER_ADMIN', 'ADMIN', 'TEAM_BOSS', 'MEMBER']).optional(),
   role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MEMBER', 'GUEST', 'BOSS']).optional(), // BOSS for backward compatibility
   editor: z.boolean().optional(),
-  status: z.enum(['active', 'disabled', 'pending']).optional()
+  status: z.enum(['active', 'disabled', 'pending']).optional(),
+  hubstaff_id: hubstaffIdField
 });
 
 const updateUserSchema = z.object({
@@ -133,7 +143,8 @@ const updateUserSchema = z.object({
   degree: z.enum(['SUPER_ADMIN', 'ADMIN', 'TEAM_BOSS', 'MEMBER']).optional(),
   role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MEMBER', 'GUEST', 'BOSS']).optional(), // BOSS for backward compatibility
   editor: z.boolean().optional(),
-  status: z.enum(['active', 'disabled', 'pending']).optional()
+  status: z.enum(['active', 'disabled', 'pending']).optional(),
+  hubstaff_id: hubstaffIdField
 });
 
 // Get users with filtering and pagination
@@ -200,6 +211,7 @@ router.get('/users', async (req, res, next) => {
       role: user.role,
       editor: user.editor,
       status: user.status,
+      hubstaff_id: user.hubstaff_id || null,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     }));
@@ -266,7 +278,8 @@ router.post('/users', async (req, res, next) => {
       degree: validatedData.degree || 'MEMBER',
       role: validatedData.role || 'MEMBER',
       editor: validatedData.editor || false,
-      status: validatedData.status || 'pending'
+      status: validatedData.status || 'pending',
+      hubstaff_id: validatedData.hubstaff_id ?? null
     });
 
     await user.save();
@@ -394,6 +407,7 @@ router.put('/users/:id', async (req, res, next) => {
     if (validatedData.role !== undefined) user.role = validatedData.role;
     if (validatedData.status !== undefined) user.status = validatedData.status;
     if (validatedData.editor !== undefined) user.editor = validatedData.editor;
+    if (validatedData.hubstaff_id !== undefined) user.hubstaff_id = validatedData.hubstaff_id;
 
     await user.save();
 

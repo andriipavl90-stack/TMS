@@ -21,10 +21,17 @@ export const getDailys = async (req, res) => {
     }
 };
 
-// All groups can see all reports (summary/view). Data is read-only for other groups.
 export const getAll = async (req, res) => {
+    const role = req.user?.role;
+    const group = req.user?.group;
+
     try {
-        const dailys = await Daily.find().sort({ date: -1 });
+        // SUPER_ADMIN sees everything; ADMIN sees all groups (cross-group management)
+        const query = role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'BOSS'
+            ? {}
+            : { group };
+
+        const dailys = await Daily.find(query).sort({ date: -1 });
         res.status(200).json(dailys);
     } catch (error) {
         res.status(404).json({ message: error.message });
@@ -41,7 +48,6 @@ export const getTeam = async (req, res) => {
     } catch (error) {
         res.status(404).json({ message: error.message });
     }
-
 }
 
 import User from '../models/User.js';
@@ -56,11 +62,10 @@ export const updateDaily = async (req, res) => {
         const normalizedDate = new Date(date);
         normalizedDate.setUTCHours(0, 0, 0, 0);
 
-        // Only own group can edit: super admin can edit any; others only their group
-        const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-        const userGroup = user?.group;
-        if (!isSuperAdmin && userGroup && !['SUPER_ADMIN', 'ADMIN'].includes(userGroup)) {
-            if (group !== userGroup) {
+        // SUPER_ADMIN and ADMIN can manage any group; MEMBER can only edit own group
+        const userRole = user?.role;
+        if (userRole !== 'SUPER_ADMIN' && userRole !== 'ADMIN' && userRole !== 'BOSS') {
+            if (group !== user?.group) {
                 return res.status(403).json({ message: 'You can only edit your own group\'s reports' });
             }
         }
@@ -98,11 +103,10 @@ export const deleteDaily = async (req, res) => {
     const daily = await Daily.findById(id);
     if (!daily) return res.status(404).json({ message: 'Report not found' });
 
-    // Only own group can delete
-    const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-    const userGroup = user?.group;
-    if (!isSuperAdmin && userGroup && !['SUPER_ADMIN', 'ADMIN'].includes(userGroup)) {
-        if (daily.group !== userGroup) {
+    // SUPER_ADMIN and ADMIN can delete any group; MEMBER can only delete own group
+    const userRole = user?.role;
+    if (userRole !== 'SUPER_ADMIN' && userRole !== 'ADMIN' && userRole !== 'BOSS') {
+        if (daily.group !== user?.group) {
             return res.status(403).json({ message: 'You can only delete your own group\'s reports' });
         }
     }

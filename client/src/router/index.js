@@ -225,6 +225,18 @@ const router = createRouter({
           }
         },
         {
+          path: 'hubstaff',
+          name: 'Hubstaff',
+          component: () => import('../views/HubstaffView.vue'),
+          meta: { title: 'Time & Activity' }
+        },
+        {
+          path: 'workflow',
+          name: 'Workflow',
+          component: () => import('../views/WorkflowView.vue'),
+          meta: { title: 'Workflow' }
+        },
+        {
           path: 'forbidden',
           name: 'Forbidden',
           component: () => import('../views/Forbidden.vue'),
@@ -263,7 +275,6 @@ router.beforeEach((to, from, next) => {
       try {
         user = JSON.parse(localStorage.getItem('user'));
       } catch (e) {
-        // Invalid user data, clear it
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         next('/login');
@@ -271,8 +282,12 @@ router.beforeEach((to, from, next) => {
       }
     }
 
-    // Use hasAnyRole for normalization (BOSS → ADMIN mapping)
-    if (!user || !hasAnyRole(user, requiredRoles)) {
+    // SUPER_ADMIN bypasses all role checks
+    if (!user) {
+      next('/forbidden');
+      return;
+    }
+    if (user.role !== 'SUPER_ADMIN' && !hasAnyRole(user, requiredRoles)) {
       next('/forbidden');
       return;
     }

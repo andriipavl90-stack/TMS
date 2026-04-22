@@ -2,7 +2,9 @@
   <div class="main-layout">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <img src="/logo.png" style="width: 100%;" alt="G-M System Logo" class="logo" />
+        <router-link to="/finance/overview" class="logo-link" aria-label="Go to Finance Overview">
+          <img src="/logo.png" style="width: 100%;" alt="G-M System Logo" class="logo" />
+        </router-link>
       </div>
 
       <nav class="sidebar-nav">
@@ -177,6 +179,22 @@
         </div>
 
         <!-- =====================
+             HUBSTAFF
+        ====================== -->
+        <router-link :to="{ name: 'Hubstaff' }" class="nav-item">
+          <span class="nav-icon">⏱️</span>
+          <span>Time & Activity</span>
+        </router-link>
+
+        <!-- =====================
+             WORKFLOW
+        ====================== -->
+        <router-link :to="{ name: 'Workflow' }" class="nav-item">
+          <span class="nav-icon">🕒</span>
+          <span>Workflow</span>
+        </router-link>
+
+        <!-- =====================
              AUDIT LOGS
         ====================== -->
         <router-link v-if="canViewAuditLogs(authStore.user)" :to="{ name: 'AuditLogs' }" class="nav-item">
@@ -328,6 +346,37 @@ const handleLogout = async () => {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
   z-index: 1;
+}
+
+.logo-link {
+  display: block;
+  line-height: 0;
+  text-decoration: none;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.logo-link:focus,
+.logo-link:active,
+.logo-link:hover {
+  outline: none;
+  background: transparent;
+  opacity: 1;
+  transform: none;
+}
+
+.logo-link:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.45);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.logo-link .logo {
+  pointer-events: none;
+  -webkit-user-drag: none;
 }
 
 .sidebar-header h2 {
