@@ -468,9 +468,9 @@ const buildChart = () => {
           borderRadius: { topLeft: 10, topRight: 10, bottomLeft: 2, bottomRight: 2 },
           borderSkipped: false,
           barThickness: 'flex',
-          maxBarThickness: 68,
+          maxBarThickness: 40,
           categoryPercentage: 0.8,
-          barPercentage: 0.85,
+          barPercentage: 0.5,
         },
       ],
     },
@@ -663,7 +663,7 @@ onUnmounted(() => {
   --wf-surface: var(--bg-primary, #fff);
   --wf-elevated: var(--bg-secondary, #f9fafb);
   --wf-muted: var(--text-secondary, #6b7280);
-  max-width: 1600px;
+  max-width: 1920px;
   margin: 0 auto;
   padding: clamp(1rem, 3vw, 1.75rem);
   display: flex;
