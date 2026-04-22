@@ -312,17 +312,37 @@ const shiftDay = (direction) => {
 };
 
 // ── Data fetch ──────────────────────────────────────────────────────
-const fetchChart = async () => {
-  loading.value = true;
+// `silent: true` skips the loading skeleton so background refreshes
+// don't make the chart disappear and re-animate from scratch.
+const fetchChart = async ({ silent = false } = {}) => {
+  if (!silent) loading.value = true;
   error.value = null;
   try {
     const res = await getWorkflowChartData({ date_from: dateFrom.value, date_to: dateTo.value });
     rawData.value = res.data?.data?.chartData || [];
   } catch (err) {
-    error.value = err.response?.data?.message || err.message;
-    rawData.value = [];
+    if (!silent) {
+      error.value = err.response?.data?.message || err.message;
+      rawData.value = [];
+    }
   } finally {
-    loading.value = false;
+    if (!silent) loading.value = false;
+  }
+};
+
+// Auto-refresh: pull fresh worked-hours from the workflow collection every 10 minutes.
+const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+let refreshTimerId = null;
+const startAutoRefresh = () => {
+  stopAutoRefresh();
+  refreshTimerId = setInterval(() => {
+    fetchChart({ silent: true });
+  }, REFRESH_INTERVAL_MS);
+};
+const stopAutoRefresh = () => {
+  if (refreshTimerId) {
+    clearInterval(refreshTimerId);
+    refreshTimerId = null;
   }
 };
 
@@ -645,9 +665,11 @@ const handleAddTime = async () => {
 // ── Lifecycle ─────────────────────────────────────────────────────────
 onMounted(() => {
   fetchChart();
+  startAutoRefresh();
 });
 
 onUnmounted(() => {
+  stopAutoRefresh();
   if (chartInstance) {
     chartInstance.destroy();
     chartInstance = null;
