@@ -166,3 +166,101 @@ export const addTime = async (req, res) => {
     res.status(500).json({ ok: false, message: err.message });
   }
 };
+
+/**
+ * POST /api/workflow/
+ *
+ * Public ingest endpoint called by the external Python sync service.
+ * Upserts a Worklog for (user, day) keyed by Hubstaff numeric id.
+ *
+ * Body:
+ *   {
+ *     member_id:        string  // Hubstaff numeric id (matches User.hubstaff_id)
+ *     date:             "YYYY-MM-DD"
+ *     work_time:        number  // tracked seconds for the day (overwrites real_time)
+ *     total_work_time?: number  // ignored — total_time is recomputed as real_time + add_time
+ *     progress?:        number  // productivity %
+ *     add_time?:        number  // additional seconds to ADD (incremented onto existing add_time)
+ *   }
+ *
+ * Behaviour:
+ *   - real_time = work_time              (overwrite, latest tracked total wins)
+ *   - add_time += payload.add_time       (increment)
+ *   - total_time = real_time + add_time  (recomputed)
+ */
+export const upsertWorkLog = async (req, res) => {
+  try {
+    const { member_id, date, work_time, progress, add_time } = req.body;
+
+    if (!member_id || !date) {
+      return res.status(400).json({ ok: false, message: 'member_id and date are required' });
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ ok: false, message: 'Invalid date format. Use YYYY-MM-DD' });
+    }
+
+    // Resolve the User by Hubstaff id — Worklog.user_id is required by the schema,
+    // so we cannot insert a row without a known User.
+    const hubstaffId = String(member_id);
+    const user = await User.findOne({ hubstaff_id: hubstaffId })
+      .select('_id name hubstaff_id')
+      .lean();
+    if (!user) {
+      return res.status(404).json({
+        ok: false,
+        message: `No user found with hubstaff_id=${hubstaffId}`,
+      });
+    }
+
+    const workSeconds = Number(work_time) || 0;
+    const addDelta = Number(add_time) || 0;
+    const productivity = Number(progress) || 0;
+
+    if (workSeconds < 0 || addDelta < 0) {
+      return res.status(400).json({ ok: false, message: 'work_time and add_time must be non-negative' });
+    }
+
+    // UTC day range — tolerant of legacy rows stored with non-midnight time-of-day.
+    const dayStart = new Date(`${date}T00:00:00.000Z`);
+    const dayEnd = new Date(dayStart.getTime() + 86400000);
+
+    let worklog = await Worklog.findOne({
+      user_id: user._id,
+      date: { $gte: dayStart, $lt: dayEnd },
+    });
+
+    if (worklog) {
+      worklog.real_time = workSeconds;
+      worklog.add_time = (worklog.add_time || 0) + addDelta;
+      worklog.total_time = worklog.real_time + worklog.add_time;
+      worklog.productivity = productivity;
+      worklog.hubstaff_id = hubstaffId;
+      worklog.source = 'sync';
+    } else {
+      worklog = new Worklog({
+        user_id: user._id,
+        hubstaff_id: hubstaffId,
+        date: dayStart,
+        real_time: workSeconds,
+        add_time: addDelta,
+        total_time: workSeconds + addDelta,
+        productivity,
+        source: 'sync',
+        status: 'approved',
+      });
+    }
+    await worklog.save();
+
+    return res.status(200).json({ ok: true, data: worklog });
+  } catch (err) {
+    console.error('workflow upsertWorkLog error:', err.message);
+    if (err.code === 11000) {
+      return res.status(409).json({
+        ok: false,
+        message: 'Duplicate work log entry (unique constraint violation)',
+        error: err.message,
+      });
+    }
+    return res.status(500).json({ ok: false, message: err.message });
+  }
+};

@@ -2,12 +2,20 @@
   <div class="main-layout">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <router-link to="/finance/overview" class="logo-link" aria-label="Go to Finance Overview">
+        <router-link to="/dashboard" class="logo-link" aria-label="Go to Dashboard">
           <img src="/logo.png" style="width: 100%;" alt="G-M System Logo" class="logo" />
         </router-link>
       </div>
 
       <nav class="sidebar-nav">
+        <!-- =====================
+             DASHBOARD
+        ====================== -->
+        <router-link :to="{ name: 'Dashboard' }" class="nav-item">
+          <span class="nav-icon">🏠</span>
+          <span>Dashboard</span>
+        </router-link>
+
         <!-- =====================
              USER MANAGEMENT
         ====================== -->
@@ -224,6 +232,13 @@
       <header class="topbar">
         <h1 class="page-title">{{ currentPageTitle }}</h1>
         <div class="topbar-actions">
+          <div class="tz-picker" :title="`Timezone ${currentOffset}`">
+            <span class="tz-icon" aria-hidden="true">🌐</span>
+            <select v-model="timezone" class="tz-select" aria-label="Timezone">
+              <option v-for="z in zones" :key="z" :value="z">{{ z }}</option>
+            </select>
+            <span class="tz-offset">{{ currentOffset }}</span>
+          </div>
           <span class="user-email">{{ authStore.user?.email }}</span>
         </div>
       </header>
@@ -239,11 +254,13 @@
 import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '../composables/useAuth';
+import { useTimezone } from '../composables/useTimezone';
 import { canViewAuditLogs, hasAnyRole } from '../utils/permissions';
 import { ROLES, LEGACY_ROLES } from '../constants/roles';
 
 const authStore = useAuthStore();
 const route = useRoute();
+const { timezone, zones, currentOffset } = useTimezone();
 
 
 const dailyreportMenuOpen = ref(false);
@@ -632,6 +649,55 @@ const handleLogout = async () => {
   background: var(--bg-tertiary);
   border-radius: var(--radius-full);
   font-weight: var(--font-weight-medium);
+}
+
+/* ── Timezone picker ── */
+.tz-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.tz-picker:focus-within {
+  border-color: var(--color-primary, #6366f1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+.tz-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+.tz-select {
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  cursor: pointer;
+  padding: 4px 2px;
+  min-width: 160px;
+  max-width: 240px;
+  outline: none;
+  appearance: none;
+}
+.tz-offset {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-light);
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .tz-select { min-width: 110px; max-width: 140px; }
+  .tz-offset { display: none; }
 }
 
 .main-content {

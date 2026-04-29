@@ -49,6 +49,13 @@
       </div>
     </div>
 
+    <!-- ── Filter banner (when arriving with ?userId=) ── -->
+    <div v-if="focusUserName" class="focus-banner">
+      <span class="focus-banner__label">Filtered to</span>
+      <strong class="focus-banner__name">{{ focusUserName }}</strong>
+      <button class="focus-banner__clear" @click="clearFocus" type="button">Show all</button>
+    </div>
+
     <!-- ── Chart Card ────────────────────────────────── -->
     <div class="wf-card chart-card">
       <div v-if="loading" class="chart-loading">
@@ -61,6 +68,16 @@
       </div>
       <div v-else class="chart-wrap">
         <canvas ref="chartCanvas" class="chart-canvas"></canvas>
+        <div class="avatar-overlay" aria-hidden="false">
+          <div
+            v-for="(p, i) in barPositions"
+            :key="p.userId || i"
+            class="avatar-wrapper"
+            :style="{ left: p.x + 'px', top: p.y + 'px' }"
+          >
+            <UserAvatar :name="p.name" :profile-image="p.profileImage" :size="40" />
+          </div>
+        </div>
       </div>
     </div>
 
@@ -187,11 +204,15 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import Chart from 'chart.js/auto';
 import { getWorkflowChartData, getWorkflowUsers, addWorkflowTime } from '../services/workflow';
+import UserAvatar from '../components/UserAvatar.vue';
 
 const toast = useToast();
+const route = useRoute();
+const router = useRouter();
 
 // ── Helpers ────────────────────────────────────────────────────────
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -230,6 +251,9 @@ const sortOrder = ref('desc'); // 'asc' | 'desc'
 const chartCanvas = ref(null);
 let chartInstance = null;
 
+// X-axis avatar positions (computed from Chart.js bar meta after layout)
+const barPositions = ref([]);
+
 // Modal
 const showModal = ref(false);
 const modalLoading = ref(false);
@@ -257,9 +281,24 @@ const numDays = computed(() => {
 // Y-axis ceiling in hours
 const yAxisMax = computed(() => 24 * numDays.value);
 
-// Sorted display data (no refetch — just re-orders the existing rawData)
+// Optional single-user focus, driven by ?userId= in the URL (e.g. when
+// arriving from the dashboard card). Cleared via the banner's "Show all".
+const focusUserId = computed(() => route.query.userId || '');
+const focusUserName = computed(() => {
+  if (!focusUserId.value) return '';
+  const row = rawData.value.find(r => String(r.userId) === String(focusUserId.value));
+  return row?.name || '';
+});
+const clearFocus = () => {
+  router.replace({ query: { ...route.query, userId: undefined } });
+};
+
+// Sorted (and optionally focused) display data
 const displayData = computed(() => {
-  const copy = [...rawData.value];
+  let copy = [...rawData.value];
+  if (focusUserId.value) {
+    copy = copy.filter(r => String(r.userId) === String(focusUserId.value));
+  }
   copy.sort((a, b) =>
     sortOrder.value === 'desc'
       ? b.total_hours - a.total_hours
@@ -448,12 +487,50 @@ const barValueLabelsPlugin = {
   },
 };
 
+// Plugin: compute bar center x + axis y after Chart.js has placed the bars,
+// then expose to Vue so we can overlay avatars under each bar.
+const avatarPositionPlugin = {
+  id: 'avatarPosition',
+  afterUpdate(chart) {
+    syncBarPositions(chart);
+  },
+  afterDraw(chart) {
+    // Safety net — on first mount/resize the x-scale may not finish sizing
+    // until the first draw. Re-sync if anything looks off.
+    if (!barPositions.value.length) syncBarPositions(chart);
+  },
+};
+
+const syncBarPositions = (chart) => {
+  const meta = chart.getDatasetMeta(0);
+  const xScale = chart.scales?.x;
+  if (!meta || !meta.data || !xScale) {
+    barPositions.value = [];
+    return;
+  }
+  const rows = displayData.value;
+  const yPx = chart.chartArea.bottom + 12;
+  barPositions.value = rows.map((row, i) => {
+    // Use the x-scale directly — this is the true tick center and is valid
+    // as soon as the scale has been laid out, regardless of bar animation state.
+    const xPx = xScale.getPixelForValue(i);
+    return {
+      x: xPx,
+      y: yPx,
+      userId: row.userId,
+      name: row.name || '',
+      profileImage: row.profileImage || '',
+    };
+  });
+};
+
 const buildChart = () => {
   if (!chartCanvas.value) return;
   if (chartInstance) {
     chartInstance.destroy();
     chartInstance = null;
   }
+  barPositions.value = [];
   if (displayData.value.length === 0) return;
 
   const labels = displayData.value.map(u => u.name);
@@ -462,7 +539,7 @@ const buildChart = () => {
 
   chartInstance = new Chart(chartCanvas.value, {
     type: 'bar',
-    plugins: [barGlowPlugin, barValueLabelsPlugin],
+    plugins: [barGlowPlugin, barValueLabelsPlugin, avatarPositionPlugin],
     data: {
       labels,
       datasets: [
@@ -497,7 +574,7 @@ const buildChart = () => {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      layout: { padding: { top: 36, right: 14, bottom: 10, left: 6 } },
+      layout: { padding: { top: 36, right: 14, bottom: 60, left: 6 } },
       animation: {
         duration: 900,
         easing: 'easeOutCubic',
@@ -536,11 +613,7 @@ const buildChart = () => {
         x: {
           border: { display: false },
           ticks: {
-            color: '#0f172a',
-            font: { size: 15, weight: '800', family: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif' },
-            padding: 12,
-            maxRotation: 30,
-            minRotation: 0,
+            display: false,
             autoSkip: false,
           },
           grid: { display: false },
@@ -767,6 +840,50 @@ onUnmounted(() => {
   max-width: 48rem;
 }
 
+/* ── Focus banner ── */
+.focus-banner {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: .6rem;
+  padding: .55rem .85rem .55rem 1rem;
+  background: linear-gradient(135deg, rgba(99, 102, 241, .1), rgba(236, 72, 153, .08));
+  border: 1px solid rgba(99, 102, 241, .25);
+  border-radius: 999px;
+  font-size: .825rem;
+  color: #4338ca;
+  box-shadow: 0 4px 14px -8px rgba(99, 102, 241, .35);
+  animation: card-rise .35s cubic-bezier(.2,.7,.3,1) both;
+}
+.focus-banner__label {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: .68rem;
+  color: #6366f1;
+}
+.focus-banner__name {
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -.01em;
+}
+.focus-banner__clear {
+  background: rgba(255, 255, 255, .8);
+  border: 1px solid rgba(99, 102, 241, .3);
+  color: #4338ca;
+  padding: .2rem .65rem;
+  border-radius: 999px;
+  font-size: .72rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s, color .15s;
+}
+.focus-banner__clear:hover {
+  background: #6366f1;
+  color: #ffffff;
+}
+
 /* ── Card ── */
 .wf-card {
   background: var(--wf-surface);
@@ -842,6 +959,19 @@ onUnmounted(() => {
 .chart-canvas {
   width: 100% !important;
   height: 460px !important;
+}
+
+/* ── Avatar overlay on X-axis ── */
+.avatar-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+.avatar-wrapper {
+  position: absolute;
+  transform: translateX(-50%);
+  pointer-events: auto;
 }
 
 @keyframes card-rise {

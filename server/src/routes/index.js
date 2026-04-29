@@ -25,6 +25,7 @@ import dailyRoutes from './daily.router.js'
 import hubstaffRoutes from './hubstaff.routes.js'
 import timeEntryRoutes from './timeEntry.routes.js'
 import workflowRoutes from './workflow.routes.js'
+import dashboardRoutes from './dashboard.routes.js'
 
 const router = express.Router();
 
@@ -72,6 +73,7 @@ router.use('/upload', uploadRoutes); // Legacy upload routes (kept for backward 
 router.use('/hubstaff', hubstaffRoutes); // Hubstaff time & activity tracking
 router.use('/time-entries', timeEntryRoutes); // In-app time tracking
 router.use('/workflow', workflowRoutes); // Workflow analytics + manual time
+router.use('/dashboard', dashboardRoutes); // Dashboard landing page
 
 export default router;
 
