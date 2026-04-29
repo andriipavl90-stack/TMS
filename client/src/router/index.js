@@ -22,7 +22,13 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: '/finance/overview'
+          redirect: '/dashboard'
+        },
+        {
+          path: 'dashboard',
+          name: 'Dashboard',
+          component: () => import('../views/DashboardView.vue'),
+          meta: { title: 'Dashboard' }
         },
         {
           path: 'user-management',

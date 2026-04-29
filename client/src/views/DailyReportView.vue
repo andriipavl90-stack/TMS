@@ -22,12 +22,32 @@
             Submit
           </button>
         </div>
-        <h1 class="report-title">{{ date }} Daily Report</h1>
+        <h1 class="report-title">Daily Report</h1>
+        <div class="date-nav">
+          <button
+            type="button"
+            class="btn-nav"
+            title="Previous day"
+            @click="shiftDate(-1)"
+          >◀</button>
+          <input
+            type="date"
+            class="date-picker"
+            v-model="date"
+            :max="todayStr"
+            @change="onDateChange"
+          />
+          <button
+            type="button"
+            class="btn-nav"
+            :disabled="date >= todayStr"
+            title="Next day"
+            @click="shiftDate(1)"
+          >▶</button>
+        </div>
       </header>
 
-      <div v-if="state === 5" class="status-badge status-approved">Approved</div>
-      <div v-if="state === 2" class="status-badge status-pending">Pending</div>
-      <div v-if="[3, 4].includes(state)" class="status-badge status-rejected">Rejected</div>
+      <div v-if="report" class="status-badge" :class="statusClass">{{ statusLabel }}</div>
 
       <div v-if="report" class="report-body">
         <button
@@ -70,12 +90,53 @@ const authStore = useAuthStore();
 
 const report = ref(null);
 const state = ref(0);
-const date = ref(new Date().toLocaleDateString('en-CA'));
+const todayStr = new Date().toLocaleDateString('en-CA');
+const date = ref(todayStr);
 
 const STORAGE_KEY = `daily_titles_${authStore.user?.id || 'anon'}`;
 
 const showActions = computed(() => [0, 1, 3, 4].includes(state.value));
 const isEditable = computed(() => [0, 1, 3, 4].includes(state.value));
+
+const statusLabel = computed(() => {
+  switch (state.value) {
+    case 5: return 'Approved';
+    case 2: return 'Pending';
+    case 3:
+    case 4: return 'Rejected';
+    default: return 'Draft';
+  }
+});
+
+const statusClass = computed(() => {
+  switch (state.value) {
+    case 5: return 'status-approved';
+    case 2: return 'status-pending';
+    case 3:
+    case 4: return 'status-rejected';
+    default: return 'status-draft';
+  }
+});
+
+function shiftDate(delta) {
+  const d = new Date(date.value + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  const next = d.toLocaleDateString('en-CA');
+  if (next > todayStr) return; // no future
+  date.value = next;
+  loadReport();
+}
+
+function onDateChange() {
+  if (!date.value) {
+    date.value = todayStr;
+    return;
+  }
+  if (date.value > todayStr) {
+    date.value = todayStr;
+  }
+  loadReport();
+}
 
 function updateSectionTitle(index, value) {
   if (report.value?.sections?.[index]) {
@@ -208,14 +269,62 @@ onMounted(loadReport);
 .report-title {
   font-size: 1.5rem;
   font-weight: 700;
-  margin: 0;
+  margin: 0 0 12px;
   color: var(--text-primary);
+}
+
+.date-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-picker {
+  padding: 6px 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  cursor: pointer;
+}
+.date-picker:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.btn-nav {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-secondary, #6b7280);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.btn-nav:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+.btn-nav:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .status-badge {
   position: absolute;
   top: 20px;
-  right: 20px;
+  left: 20px;
   padding: 6px 16px;
   border-radius: var(--radius-md);
   font-size: 0.875rem;
@@ -236,6 +345,11 @@ onMounted(loadReport);
 .status-rejected {
   background: rgba(239, 68, 68, 0.15);
   color: #dc2626;
+}
+
+.status-draft {
+  background: rgba(107, 114, 128, 0.15);
+  color: #4b5563;
 }
 
 .report-body {
